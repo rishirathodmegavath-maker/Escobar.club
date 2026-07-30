@@ -3,12 +3,10 @@ package club.escobar.service;
 import club.escobar.config.MetricsSyncProperties;
 import club.escobar.dto.metrics.ContentMetricsSnapshotResponse;
 import club.escobar.dto.metrics.LeaderboardEntryResponse;
-import club.escobar.entity.Application;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
 import club.escobar.entity.ContentMetricsSnapshot;
 import club.escobar.entity.User;
-import club.escobar.entity.enums.ApplicationStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
@@ -63,7 +61,6 @@ class ContentMetricsServiceImplTest {
     private User creator;
     private User business;
     private Campaign campaign;
-    private Application application;
     private Content publishedContent;
 
     @BeforeEach
@@ -79,9 +76,7 @@ class ContentMetricsServiceImplTest {
                 .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(30))
                 .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.ACTIVE)
                 .build();
-        application = Application.builder().id(5L).creator(creator).campaign(campaign)
-                .status(ApplicationStatus.APPROVED).pitchMessage("pitch").build();
-        publishedContent = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        publishedContent = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("post.png").mediaType(MediaType.IMAGE).status(ContentStatus.PUBLISHED)
                 .postUrl("https://www.instagram.com/p/Cabc123/").version(1).build();
     }

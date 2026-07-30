@@ -32,18 +32,23 @@ public class CreatorProfile {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "profile_picture_url", length = 500)
+    private String profilePictureUrl;
+
     @Column(length = 80)
     private String niche;
+
+    @Column(name = "open_to_other_niches", nullable = false)
+    @Builder.Default
+    private boolean openToOtherNiches = false;
+
+    @Column(name = "instagram_profile_url", nullable = false, length = 500)
+    @Builder.Default
+    private String instagramProfileUrl = "";
 
     @Column(name = "follower_count")
     @Builder.Default
     private Long followerCount = 0L;
-
-    @ElementCollection
-    @CollectionTable(name = "creator_social_links", joinColumns = @JoinColumn(name = "creator_profile_id"))
-    @Column(name = "url", length = 500)
-    @Builder.Default
-    private List<String> socialLinks = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "creator_portfolio_items", joinColumns = @JoinColumn(name = "creator_profile_id"))

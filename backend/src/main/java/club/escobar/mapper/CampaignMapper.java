@@ -10,6 +10,8 @@ public interface CampaignMapper {
 
     @Mapping(target = "businessId", source = "business.id")
     @Mapping(target = "businessCompanyName", source = "business.businessProfile.companyName")
-    @Mapping(target = "acceptingApplications", expression = "java(entity.isAcceptingApplications())")
+    @Mapping(target = "businessLogoUrl", source = "business.businessProfile.logoUrl")
+    @Mapping(target = "acceptingSubmissions", expression = "java(entity.isOpenForSubmissions())")
+    @Mapping(target = "hot", ignore = true)
     CampaignResponse toResponse(Campaign entity);
 }

@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 
@@ -52,6 +53,17 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmailIgnoreCase(request.email())) {
             throw new DuplicateResourceException("An account with this email already exists");
         }
+        if (request.role() == UserRole.BUSINESS) {
+            if (!StringUtils.hasText(request.gstNumber())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "GST Number is required");
+            }
+            if (!StringUtils.hasText(request.contactPersonName())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Contact Person Name is required");
+            }
+            if (!StringUtils.hasText(request.mobileNumber())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Mobile Number is required");
+            }
+        }
 
         User user = userRepository.save(User.builder()
                 .email(request.email())
@@ -70,6 +82,9 @@ public class AuthServiceImpl implements AuthService {
             businessProfileRepository.save(BusinessProfile.builder()
                     .user(user)
                     .companyName(request.displayName())
+                    .gstNumber(request.gstNumber())
+                    .contactPersonName(request.contactPersonName())
+                    .mobileNumber(request.mobileNumber())
                     .build());
         }
 

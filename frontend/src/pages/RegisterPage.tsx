@@ -10,12 +10,28 @@ import { Input } from "@/components/Field";
 import { extractErrorMessage } from "@/api/client";
 import type { UserRole } from "@/types";
 
-const schema = z.object({
-  role: z.enum(["CREATOR", "BUSINESS"]),
-  displayName: z.string().min(2, "Must be at least 2 characters").max(150),
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Must be at least 8 characters"),
-});
+const schema = z
+  .object({
+    role: z.enum(["CREATOR", "BUSINESS"]),
+    displayName: z.string().min(2, "Must be at least 2 characters").max(150),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().min(8, "Must be at least 8 characters"),
+    gstNumber: z.string().max(20).optional().or(z.literal("")),
+    contactPersonName: z.string().max(150).optional().or(z.literal("")),
+    mobileNumber: z.string().max(20).optional().or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role !== "BUSINESS") return;
+    if (!data.gstNumber?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required", path: ["gstNumber"] });
+    }
+    if (!data.contactPersonName?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Contact person name is required", path: ["contactPersonName"] });
+    }
+    if (!data.mobileNumber?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mobile number is required", path: ["mobileNumber"] });
+    }
+  });
 type FormValues = z.infer<typeof schema>;
 
 export function RegisterPage() {
@@ -76,11 +92,29 @@ export function RegisterPage() {
           </div>
 
           <Input
-            label={role === "CREATOR" ? "Display name" : "Company name"}
-            placeholder={role === "CREATOR" ? "Jamie Rivera" : "Acme Studios"}
+            label={role === "CREATOR" ? "Display name" : "Company Legal Name"}
+            placeholder={role === "CREATOR" ? "Jamie Rivera" : "Acme Studios Pvt. Ltd."}
             error={errors.displayName?.message}
             {...register("displayName")}
           />
+          {role === "BUSINESS" && (
+            <>
+              <Input label="GST Number" placeholder="22AAAAA0000A1Z5" error={errors.gstNumber?.message} {...register("gstNumber")} />
+              <Input
+                label="Contact Person Name"
+                placeholder="Jamie Rivera"
+                error={errors.contactPersonName?.message}
+                {...register("contactPersonName")}
+              />
+              <Input
+                label="Mobile Number"
+                type="tel"
+                placeholder="+91 98765 43210"
+                error={errors.mobileNumber?.message}
+                {...register("mobileNumber")}
+              />
+            </>
+          )}
           <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
           <Input
             label="Password"

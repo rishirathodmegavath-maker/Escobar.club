@@ -22,7 +22,8 @@ const schema = z
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     ratePerThousandViewsInr: z.coerce.number().positive("Rate must be greater than zero"),
-    status: z.enum(["DRAFT", "ACTIVE", "CLOSED"]).optional(),
+    status: z.enum(["DRAFT", "STARTING_SOON", "ACTIVE", "CLOSED"]).optional(),
+    urgent: z.boolean().optional(),
   })
   .refine((data) => data.endDate >= data.startDate, {
     message: "End date must be on or after the start date",
@@ -66,6 +67,10 @@ function CampaignForm({
         error={errors.ratePerThousandViewsInr?.message}
         {...register("ratePerThousandViewsInr")}
       />
+      <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
+        <input type="checkbox" className="focus-ring h-4 w-4 rounded border-ink-300" {...register("urgent")} />
+        Mark as urgent (needs creators immediately — shows in the Hot tab on Discover)
+      </label>
       {showStatus && (
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink-700">Status</span>
@@ -74,7 +79,8 @@ function CampaignForm({
             {...register("status")}
           >
             <option value="DRAFT">Draft (not visible to creators)</option>
-            <option value="ACTIVE">Active (visible, accepting applications)</option>
+            <option value="STARTING_SOON">Starting soon (visible, not yet accepting submissions)</option>
+            <option value="ACTIVE">Active (visible, accepting content submissions)</option>
             <option value="CLOSED">Closed</option>
           </select>
         </label>
@@ -100,6 +106,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
         endDate: values.endDate,
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
         status: (values.status ?? campaign.status) as CampaignStatus,
+        urgent: values.urgent ?? false,
       }),
     onSuccess: () => {
       push("Campaign updated", "success");
@@ -118,7 +125,14 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
             {campaign.startDate} – {campaign.endDate} · {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
           </p>
         </div>
-        <StatusPill status={campaign.status} />
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {campaign.hot && (
+            <span className="rounded-full bg-alert-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-alert-deep">
+              🔥 Hot
+            </span>
+          )}
+          <StatusPill status={campaign.status} />
+        </div>
       </div>
 
       {editing ? (
@@ -134,6 +148,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
               endDate: campaign.endDate,
               ratePerThousandViewsInr: campaign.ratePerThousandViewsInr,
               status: campaign.status,
+              urgent: campaign.urgent,
             }}
             onSubmit={(values) => updateMutation.mutate(values)}
           />
@@ -169,9 +184,10 @@ export function BusinessCampaignsPage() {
         startDate: values.startDate,
         endDate: values.endDate,
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
+        urgent: values.urgent ?? false,
       }),
     onSuccess: () => {
-      push("Campaign created as a draft — activate it when you're ready", "success");
+      push("Campaign created", "success");
       queryClient.invalidateQueries({ queryKey: ["campaigns", "mine"] });
       setCreating(false);
     },
@@ -209,7 +225,7 @@ export function BusinessCampaignsPage() {
         <EmptyState
           icon={<CompassIcon className="h-10 w-10" />}
           title="No campaigns yet"
-          description="Create your first campaign to start receiving creator applications."
+          description="Create your first campaign to start receiving creator content submissions."
         />
       ) : (
         <div className="flex flex-col gap-5">

@@ -11,7 +11,7 @@ import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.CreatorKycMapper;
-import club.escobar.repository.ApplicationRepository;
+import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.CreatorKycService;
@@ -30,7 +30,7 @@ public class CreatorKycServiceImpl implements CreatorKycService {
     private static final Logger log = LoggerFactory.getLogger(CreatorKycServiceImpl.class);
 
     private final CreatorKycProfileRepository creatorKycProfileRepository;
-    private final ApplicationRepository applicationRepository;
+    private final ContentRepository contentRepository;
     private final UserRepository userRepository;
     private final CreatorKycMapper creatorKycMapper;
 
@@ -95,8 +95,8 @@ public class CreatorKycServiceImpl implements CreatorKycService {
     }
 
     private void assertReviewable(Long businessUserId, Long creatorUserId) {
-        if (!applicationRepository.existsByCreator_IdAndCampaign_Business_Id(creatorUserId, businessUserId)) {
-            throw new ForbiddenActionException("You may only review KYC for creators who have applied to your campaigns");
+        if (!contentRepository.existsByCreator_IdAndBusiness_Id(creatorUserId, businessUserId)) {
+            throw new ForbiddenActionException("You may only review KYC for creators who have submitted content to your business");
         }
     }
 

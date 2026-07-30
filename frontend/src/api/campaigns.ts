@@ -1,8 +1,9 @@
 import { apiClient } from "./client";
-import type { Campaign, CampaignStatus, PageResponse } from "@/types";
+import type { Campaign, CampaignCategory, CampaignStatus, PageResponse } from "@/types";
 
 export interface CampaignSearchParams {
   search?: string;
+  category?: CampaignCategory;
   page?: number;
   size?: number;
 }
@@ -13,6 +14,7 @@ export interface CampaignFormPayload {
   startDate: string;
   endDate: string;
   ratePerThousandViewsInr: number;
+  urgent: boolean;
 }
 
 export interface CampaignUpdatePayload extends CampaignFormPayload {

@@ -10,6 +10,9 @@ public record RegisterRequest(
         @NotBlank @Email @Size(max = 255) String email,
         @NotBlank @Size(min = 8, max = 100) String password,
         @NotNull UserRole role,
-        @NotBlank @Size(max = 150) String displayName
+        @NotBlank @Size(max = 150) String displayName,
+        @Size(max = 20) String gstNumber,
+        @Size(max = 150) String contactPersonName,
+        @Size(max = 20) String mobileNumber
 ) {
 }

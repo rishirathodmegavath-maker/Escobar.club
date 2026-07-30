@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 
 function initialsFrom(name: string) {
@@ -15,8 +16,30 @@ const palette = [
   "bg-danger-soft text-danger-deep",
 ];
 
-export function Avatar({ name, size = 40, className }: { name: string; size?: number; className?: string }) {
+interface AvatarProps {
+  name: string;
+  imageUrl?: string | null;
+  size?: number;
+  className?: string;
+}
+
+export function Avatar({ name, imageUrl, size = 40, className }: AvatarProps) {
   const paletteIndex = name.length % palette.length;
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [imageUrl]);
+
+  if (imageUrl && !imageFailed) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        onError={() => setImageFailed(true)}
+        className={clsx("shrink-0 rounded-avatar object-cover", className)}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   return (
     <span
       className={clsx("flex shrink-0 items-center justify-center rounded-avatar font-display font-semibold", palette[paletteIndex], className)}

@@ -1,12 +1,10 @@
 export type UserRole = "CREATOR" | "BUSINESS" | "ADMIN";
 
-export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
-
 export type ContentStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "APPROVED" | "REJECTED" | "PUBLISHED";
 
 export type MediaType = "IMAGE" | "VIDEO";
 
-export type CampaignStatus = "DRAFT" | "ACTIVE" | "CLOSED";
+export type CampaignStatus = "DRAFT" | "STARTING_SOON" | "ACTIVE" | "CLOSED";
 
 export type KycStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
@@ -30,9 +28,11 @@ export interface CreatorProfile {
   email: string;
   displayName: string;
   bio: string | null;
+  profilePictureUrl: string | null;
   niche: string | null;
+  openToOtherNiches: boolean;
+  instagramProfileUrl: string;
   followerCount: number;
-  socialLinks: string[];
   portfolioLinks: string[];
   createdAt: string;
 }
@@ -41,6 +41,9 @@ export interface BusinessProfile {
   id: number;
   userId: number;
   companyName: string;
+  gstNumber: string;
+  contactPersonName: string;
+  mobileNumber: string;
   industry: string | null;
   description: string | null;
   logoUrl: string | null;
@@ -52,31 +55,21 @@ export interface Campaign {
   id: number;
   businessId: number;
   businessCompanyName: string;
+  businessLogoUrl: string | null;
   title: string;
   description: string | null;
   startDate: string;
   endDate: string;
   ratePerThousandViewsInr: number;
   status: CampaignStatus;
-  acceptingApplications: boolean;
+  acceptingSubmissions: boolean;
+  urgent: boolean;
+  hot: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ApplicationRecord {
-  id: number;
-  creatorId: number;
-  creatorDisplayName: string;
-  campaignId: number;
-  campaignTitle: string;
-  businessId: number;
-  businessCompanyName: string;
-  pitchMessage: string;
-  status: ApplicationStatus;
-  reviewNote: string | null;
-  appliedAt: string;
-  reviewedAt: string | null;
-}
+export type CampaignCategory = "HOT" | "LIVE" | "UPCOMING";
 
 export interface ContentReviewNote {
   id: number;
@@ -89,13 +82,14 @@ export interface ContentReviewNote {
 
 export interface ContentRecord {
   id: number;
-  applicationId: number;
   creatorId: number;
   creatorDisplayName: string;
+  creatorProfilePictureUrl: string | null;
   campaignId: number;
   campaignTitle: string;
   businessId: number;
   businessCompanyName: string;
+  businessLogoUrl: string | null;
   caption: string | null;
   mediaUrl: string;
   mediaType: MediaType;
@@ -158,6 +152,7 @@ export interface LeaderboardEntry {
   rank: number;
   creatorId: number;
   creatorDisplayName: string;
+  creatorProfilePictureUrl: string | null;
   totalViews: number;
   publishedContentCount: number;
 }

@@ -9,9 +9,11 @@ public record CreatorProfileResponse(
         String email,
         String displayName,
         String bio,
+        String profilePictureUrl,
         String niche,
+        boolean openToOtherNiches,
+        String instagramProfileUrl,
         Long followerCount,
-        List<String> socialLinks,
         List<String> portfolioLinks,
         Instant createdAt
 ) {

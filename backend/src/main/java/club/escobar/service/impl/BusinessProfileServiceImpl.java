@@ -60,6 +60,9 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Business profile not found for user id " + userId));
 
         profile.setCompanyName(request.companyName());
+        profile.setGstNumber(request.gstNumber());
+        profile.setContactPersonName(request.contactPersonName());
+        profile.setMobileNumber(request.mobileNumber());
         profile.setIndustry(request.industry());
         profile.setDescription(request.description());
         profile.setLogoUrl(request.logoUrl());

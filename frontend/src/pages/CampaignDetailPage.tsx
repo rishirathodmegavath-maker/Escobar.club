@@ -1,23 +1,10 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { campaignsApi } from "@/api/campaigns";
-import { applicationsApi } from "@/api/applications";
-import { extractErrorMessage } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { FullPageSpinner } from "@/components/Spinner";
-import { Button } from "@/components/Button";
-import { TextArea } from "@/components/Field";
-import { StatusPill } from "@/components/StatusPill";
-import { useToast } from "@/components/Toast";
-
-const schema = z.object({
-  pitchMessage: z.string().min(20, "Tell them a bit more — at least 20 characters").max(4000),
-});
-type FormValues = z.infer<typeof schema>;
+import { Avatar } from "@/components/Avatar";
+import { ContentSubmitCard } from "@/features/content/ContentSubmitCard";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" });
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -26,37 +13,11 @@ export function CampaignDetailPage() {
   const { id } = useParams();
   const campaignId = Number(id);
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { push } = useToast();
 
   const { data: campaign, isLoading } = useQuery({
     queryKey: ["campaign", campaignId],
     queryFn: () => campaignsApi.getById(campaignId),
     enabled: Number.isFinite(campaignId),
-  });
-
-  const { data: myApplications } = useQuery({
-    queryKey: ["applications", "me", "all"],
-    queryFn: () => applicationsApi.mine(0, 200),
-    enabled: user?.role === "CREATOR",
-  });
-
-  const existingApplication = myApplications?.content.find((a) => a.campaignId === campaignId);
-
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
-
-  const applyMutation = useMutation({
-    mutationFn: (values: FormValues) => applicationsApi.create({ campaignId, pitchMessage: values.pitchMessage }),
-    onSuccess: () => {
-      push("Application sent! You'll be notified once it's reviewed.", "success");
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-    },
-    onError: (err) => setSubmitError(extractErrorMessage(err, "Could not submit your application")),
   });
 
   if (isLoading) return <FullPageSpinner />;
@@ -65,9 +26,7 @@ export function CampaignDetailPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="card-surface mb-6 flex items-start gap-5 p-7">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-signal-soft font-display text-2xl font-semibold text-signal-deep">
-          {campaign.businessCompanyName[0]?.toUpperCase()}
-        </div>
+        <Avatar name={campaign.businessCompanyName} imageUrl={campaign.businessLogoUrl} size={64} className="text-2xl" />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl font-semibold text-ink-900">{campaign.title}</h1>
           <p className="text-sm uppercase tracking-wide text-ink-400">{campaign.businessCompanyName}</p>
@@ -81,15 +40,26 @@ export function CampaignDetailPage() {
             </span>
           </div>
         </div>
-        {campaign.acceptingApplications ? (
-          <span className="shrink-0 rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
-            Open
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
-            Closed
-          </span>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {campaign.hot && (
+            <span className="rounded-full bg-alert-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-alert-deep">
+              🔥 Hot
+            </span>
+          )}
+          {campaign.acceptingSubmissions ? (
+            <span className="rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
+              Live
+            </span>
+          ) : campaign.status === "STARTING_SOON" ? (
+            <span className="rounded-full bg-gold-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-gold-deep">
+              Upcoming
+            </span>
+          ) : (
+            <span className="rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
+              Closed
+            </span>
+          )}
+        </div>
       </div>
 
       {campaign.description && (
@@ -101,42 +71,19 @@ export function CampaignDetailPage() {
 
       {user?.role === "CREATOR" && (
         <div className="card-surface p-7">
-          <h2 className="mb-4 font-display text-lg font-semibold text-ink-800">Apply to this campaign</h2>
-          {existingApplication ? (
-            <div className="flex items-center gap-3 rounded-lg border border-ink-100 bg-paper-100 px-4 py-3">
-              <StatusPill status={existingApplication.status} />
-              <p className="text-sm text-ink-500">
-                {existingApplication.status === "PENDING" && "Your application is awaiting review."}
-                {existingApplication.status === "APPROVED" && "You're approved! Head to My Submissions to upload content."}
-                {existingApplication.status === "REJECTED" && "This application was not approved."}
+          <h2 className="mb-4 font-display text-lg font-semibold text-ink-800">Submit content</h2>
+          {campaign.acceptingSubmissions ? (
+            <>
+              <p className="mb-4 text-sm text-ink-500">
+                Upload a piece of content for this campaign. The business will review it before it goes live — you can
+                submit as many pieces as you like.
               </p>
-            </div>
-          ) : !campaign.acceptingApplications ? (
-            <p className="text-sm text-ink-500">This campaign is not currently accepting applications.</p>
+              <ContentSubmitCard campaign={campaign} />
+            </>
+          ) : campaign.status === "STARTING_SOON" ? (
+            <p className="text-sm text-ink-500">This campaign hasn't gone live yet — check back once it's Live to submit content.</p>
           ) : (
-            <form
-              onSubmit={handleSubmit((values) => {
-                setSubmitError(null);
-                applyMutation.mutate(values);
-              })}
-              className="flex flex-col gap-4"
-            >
-              {submitError && (
-                <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
-                  {submitError}
-                </div>
-              )}
-              <TextArea
-                label="Pitch message"
-                placeholder="Introduce yourself and explain why you'd be a great fit for this campaign…"
-                rows={5}
-                error={errors.pitchMessage?.message}
-                {...register("pitchMessage")}
-              />
-              <Button type="submit" isLoading={isSubmitting} className="self-start">
-                Submit application
-              </Button>
-            </form>
+            <p className="text-sm text-ink-500">This campaign is closed and no longer accepting content submissions.</p>
           )}
         </div>
       )}

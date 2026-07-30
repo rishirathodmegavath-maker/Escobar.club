@@ -128,7 +128,8 @@ public class ContentMetricsServiceImpl implements ContentMetricsService {
             LeaderboardRow row = content.get(i);
             int rank = (int) rows.getPageable().getOffset() + i + 1;
             entries.add(new LeaderboardEntryResponse(
-                    rank, row.getCreatorId(), row.getCreatorDisplayName(), row.getTotalViews(), row.getPublishedContentCount()));
+                    rank, row.getCreatorId(), row.getCreatorDisplayName(), row.getCreatorProfilePictureUrl(),
+                    row.getTotalViews(), row.getPublishedContentCount()));
         }
         return new PageResponse<>(entries, rows.getNumber(), rows.getSize(), rows.getTotalElements(), rows.getTotalPages(), rows.isLast());
     }

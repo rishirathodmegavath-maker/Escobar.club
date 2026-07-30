@@ -19,10 +19,10 @@ export interface UploadResult {
 }
 
 export const contentApi = {
-  submit: (applicationId: number, payload: SubmitContentPayload) =>
+  submit: (campaignId: number, payload: SubmitContentPayload) =>
     apiClient
-      .post<ContentRecord>(`/applications/${applicationId}/content`, {
-        applicationId,
+      .post<ContentRecord>(`/campaigns/${campaignId}/content`, {
+        campaignId,
         ...payload,
       })
       .then((r) => r.data),

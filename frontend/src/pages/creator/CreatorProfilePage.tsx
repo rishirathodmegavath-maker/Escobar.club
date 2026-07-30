@@ -10,14 +10,18 @@ import { Button } from "@/components/Button";
 import { Input, TextArea } from "@/components/Field";
 import { FullPageSpinner } from "@/components/Spinner";
 import { TickMeter } from "@/components/TickMeter";
+import { ImageUploadField } from "@/components/ImageUploadField";
 
 const linkSchema = z.object({ value: z.string().url("Must be a valid URL") });
+const INSTAGRAM_PROFILE_PATTERN = /^https?:\/\/(www\.)?instagram\.com\/.+/;
 const schema = z.object({
   displayName: z.string().min(2).max(120),
   bio: z.string().max(4000).optional().or(z.literal("")),
+  profilePictureUrl: z.string().optional().or(z.literal("")),
   niche: z.string().max(80).optional().or(z.literal("")),
+  openToOtherNiches: z.enum(["true", "false"]),
+  instagramProfileUrl: z.string().regex(INSTAGRAM_PROFILE_PATTERN, "Enter a valid Instagram profile URL"),
   followerCount: z.coerce.number().int().min(0),
-  socialLinks: z.array(linkSchema).max(20),
   portfolioLinks: z.array(linkSchema).max(30),
 });
 type FormValues = z.infer<typeof schema>;
@@ -33,24 +37,36 @@ export function CreatorProfilePage() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { displayName: "", bio: "", niche: "", followerCount: 0, socialLinks: [], portfolioLinks: [] },
+    defaultValues: {
+      displayName: "",
+      bio: "",
+      profilePictureUrl: "",
+      niche: "",
+      openToOtherNiches: "false",
+      instagramProfileUrl: "",
+      followerCount: 0,
+      portfolioLinks: [],
+    },
   });
 
-  const socialFields = useFieldArray({ control, name: "socialLinks" });
   const portfolioFields = useFieldArray({ control, name: "portfolioLinks" });
   const followerCount = watch("followerCount");
+  const profilePictureUrl = watch("profilePictureUrl");
 
   useEffect(() => {
     if (data) {
       reset({
         displayName: data.displayName,
         bio: data.bio ?? "",
+        profilePictureUrl: data.profilePictureUrl ?? "",
         niche: data.niche ?? "",
+        openToOtherNiches: data.openToOtherNiches ? "true" : "false",
+        instagramProfileUrl: data.instagramProfileUrl,
         followerCount: data.followerCount,
-        socialLinks: data.socialLinks.map((v) => ({ value: v })),
         portfolioLinks: data.portfolioLinks.map((v) => ({ value: v })),
       });
     }
@@ -61,9 +77,11 @@ export function CreatorProfilePage() {
       creatorsApi.updateMine({
         displayName: values.displayName,
         bio: values.bio ?? "",
+        profilePictureUrl: values.profilePictureUrl ?? "",
         niche: values.niche ?? "",
+        openToOtherNiches: values.openToOtherNiches === "true",
+        instagramProfileUrl: values.instagramProfileUrl,
         followerCount: values.followerCount,
-        socialLinks: values.socialLinks.map((l) => l.value),
         portfolioLinks: values.portfolioLinks.map((l) => l.value),
       }),
     onSuccess: () => {
@@ -78,11 +96,34 @@ export function CreatorProfilePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-semibold text-ink-900">My profile</h1>
-      <p className="mt-1.5 mb-6 text-ink-500">This is what businesses see when reviewing your applications.</p>
+      <p className="mt-1.5 mb-6 text-ink-500">This is what businesses see when reviewing your content submissions.</p>
 
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="card-surface flex flex-col gap-5 p-7">
+        <ImageUploadField
+          label="Profile picture"
+          value={profilePictureUrl}
+          uploadFn={creatorsApi.uploadProfilePicture}
+          onChange={(url) => setValue("profilePictureUrl", url, { shouldDirty: true })}
+          shape="circle"
+        />
         <Input label="Display name" error={errors.displayName?.message} {...register("displayName")} />
+        <Input
+          label="Instagram profile link"
+          placeholder="https://instagram.com/yourhandle"
+          error={errors.instagramProfileUrl?.message}
+          {...register("instagramProfileUrl")}
+        />
         <Input label="Niche / category" placeholder="e.g. Beauty, Fitness, Tech" error={errors.niche?.message} {...register("niche")} />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-ink-700">Open to other niches?</span>
+          <select
+            className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900"
+            {...register("openToOtherNiches")}
+          >
+            <option value="false">No — only my primary niche</option>
+            <option value="true">Yes — consider me for other niches too</option>
+          </select>
+        </label>
         <TextArea label="Bio" rows={4} error={errors.bio?.message} {...register("bio")} />
 
         <div>
@@ -95,16 +136,6 @@ export function CreatorProfilePage() {
           />
           <TickMeter value={Number(followerCount) || 0} max={100000} className="mt-3" accent="gold" />
         </div>
-
-        <FieldArraySection
-          title="Social handles"
-          fields={socialFields.fields}
-          onAdd={() => socialFields.append({ value: "" })}
-          onRemove={socialFields.remove}
-          register={register}
-          name="socialLinks"
-          errors={errors.socialLinks}
-        />
 
         <FieldArraySection
           title="Portfolio links"
@@ -138,8 +169,8 @@ function FieldArraySection({
   onAdd: () => void;
   onRemove: (index: number) => void;
   register: ReturnType<typeof useForm<FormValues>>["register"];
-  name: "socialLinks" | "portfolioLinks";
-  errors?: FieldErrors<FormValues>["socialLinks"] | FieldErrors<FormValues>["portfolioLinks"];
+  name: "portfolioLinks";
+  errors?: FieldErrors<FormValues>["portfolioLinks"];
 }) {
   return (
     <div>

@@ -25,8 +25,9 @@ public class CampaignController {
     @GetMapping("/api/campaigns")
     public ResponseEntity<PageResponse<CampaignResponse>> browse(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
             @PageableDefault(size = 12) Pageable pageable) {
-        return ResponseEntity.ok(campaignService.listPublic(search, pageable));
+        return ResponseEntity.ok(campaignService.listPublic(search, category, pageable));
     }
 
     @GetMapping("/api/campaigns/{id}")

@@ -1,8 +1,5 @@
 package club.escobar.integration;
 
-import club.escobar.dto.application.ApplicationCreateRequest;
-import club.escobar.dto.application.ApplicationResponse;
-import club.escobar.dto.application.ApplicationStatusUpdateRequest;
 import club.escobar.dto.auth.AuthResponse;
 import club.escobar.dto.auth.RegisterRequest;
 import club.escobar.dto.campaign.CampaignCreateRequest;
@@ -15,7 +12,6 @@ import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.metrics.ContentMetricsSnapshotResponse;
 import club.escobar.dto.metrics.LeaderboardEntryResponse;
-import club.escobar.entity.enums.ApplicationStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
@@ -88,19 +84,8 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
         Long businessId = businessAuth.user().id();
         Long campaignId = createActiveCampaign(businessAuth, "Gamma Launch");
 
-        var applyResponse = rest.exchange(baseUrl() + "/api/applications", HttpMethod.POST,
-                new HttpEntity<>(new ApplicationCreateRequest(campaignId, "Pitch message"),
-                        authHeaders(creatorAuth.accessToken())),
-                ApplicationResponse.class);
-        Long applicationId = applyResponse.getBody().id();
-
-        rest.exchange(baseUrl() + "/api/applications/" + applicationId + "/status", HttpMethod.PATCH,
-                new HttpEntity<>(new ApplicationStatusUpdateRequest(ApplicationStatus.APPROVED, "Welcome!"),
-                        authHeaders(businessAuth.accessToken())),
-                ApplicationResponse.class);
-
-        var submitResponse = rest.exchange(baseUrl() + "/api/applications/" + applicationId + "/content", HttpMethod.POST,
-                new HttpEntity<>(new ContentCreateRequest(applicationId, "caption", "http://media/1.png", MediaType.IMAGE),
+        var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
+                new HttpEntity<>(new ContentCreateRequest(campaignId, "caption", "http://media/1.png", MediaType.IMAGE),
                         authHeaders(creatorAuth.accessToken())),
                 ContentResponse.class);
         Long contentId = submitResponse.getBody().id();

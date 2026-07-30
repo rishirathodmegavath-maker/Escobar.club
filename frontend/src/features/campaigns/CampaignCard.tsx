@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Campaign } from "@/types";
+import { Avatar } from "@/components/Avatar";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -15,21 +16,35 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
       className="card-surface group flex flex-col gap-4 p-5 hover:-translate-y-0.5"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-base font-semibold text-ink-900 group-hover:text-signal-700">
-            {campaign.title}
-          </h3>
-          <p className="truncate text-xs uppercase tracking-wide text-ink-400">{campaign.businessCompanyName}</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={campaign.businessCompanyName} imageUrl={campaign.businessLogoUrl} size={36} />
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-base font-semibold text-ink-900 group-hover:text-signal-700">
+              {campaign.title}
+            </h3>
+            <p className="truncate text-xs uppercase tracking-wide text-ink-400">{campaign.businessCompanyName}</p>
+          </div>
         </div>
-        {campaign.acceptingApplications ? (
-          <span className="shrink-0 rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
-            Open
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
-            Closed
-          </span>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {campaign.hot && (
+            <span className="rounded-full bg-alert-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-alert-deep">
+              🔥 Hot
+            </span>
+          )}
+          {campaign.acceptingSubmissions ? (
+            <span className="rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
+              Live
+            </span>
+          ) : campaign.status === "STARTING_SOON" ? (
+            <span className="rounded-full bg-gold-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-gold-deep">
+              Upcoming
+            </span>
+          ) : (
+            <span className="rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
+              Closed
+            </span>
+          )}
+        </div>
       </div>
 
       {campaign.description && <p className="line-clamp-3 text-sm text-ink-500">{campaign.description}</p>}

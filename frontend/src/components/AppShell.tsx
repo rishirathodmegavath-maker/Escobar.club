@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useAuth } from "@/auth/AuthContext";
+import { businessesApi } from "@/api/businesses";
+import { creatorsApi } from "@/api/creators";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
-import { CompassIcon, InboxIcon, ImageStackIcon, UserIcon, LogoutIcon, TrophyIcon, MegaphoneIcon, IdCardIcon } from "./icons";
+import { CompassIcon, ImageStackIcon, UserIcon, LogoutIcon, TrophyIcon, MegaphoneIcon, IdCardIcon } from "./icons";
 
 interface NavItem {
   to: string;
@@ -17,7 +20,6 @@ function navItemsForRole(role: string | undefined): NavItem[] {
     return [
       { to: "/", label: "Discover", icon: CompassIcon },
       { to: "/business/campaigns", label: "My campaigns", icon: MegaphoneIcon },
-      { to: "/business/applications", label: "Applications", icon: InboxIcon },
       { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
       { to: "/business/leaderboard", label: "Leaderboard", icon: TrophyIcon },
       { to: "/business/profile", label: "Company profile", icon: UserIcon },
@@ -26,7 +28,6 @@ function navItemsForRole(role: string | undefined): NavItem[] {
   if (role === "CREATOR") {
     return [
       { to: "/", label: "Discover", icon: CompassIcon },
-      { to: "/creator/applications", label: "My applications", icon: InboxIcon },
       { to: "/creator/content", label: "My submissions", icon: ImageStackIcon },
       { to: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
       { to: "/creator/kyc", label: "My KYC", icon: IdCardIcon },
@@ -40,6 +41,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const items = navItemsForRole(user?.role);
+
+  const { data: businessProfile } = useQuery({
+    queryKey: ["business", "me"],
+    queryFn: businessesApi.getMine,
+    enabled: user?.role === "BUSINESS",
+  });
+  const { data: creatorProfile } = useQuery({
+    queryKey: ["creator", "me"],
+    queryFn: creatorsApi.getMine,
+    enabled: user?.role === "CREATOR",
+  });
+  const avatarImageUrl = businessProfile?.logoUrl ?? creatorProfile?.profilePictureUrl;
 
   return (
     <div className="flex min-h-screen bg-paper">
@@ -77,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {user ? (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-            <Avatar name={user.email} size={34} />
+            <Avatar name={user.email} imageUrl={avatarImageUrl} size={34} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-paper-50">{user.email}</p>
               <p className="text-[11px] uppercase tracking-wide text-paper-50/50">{user.role.toLowerCase()}</p>

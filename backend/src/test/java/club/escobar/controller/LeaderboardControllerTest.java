@@ -53,7 +53,7 @@ class LeaderboardControllerTest {
     @Test
     void businessLeaderboard_returns200_withRankedEntries() throws Exception {
         authenticateAs(UserRole.BUSINESS);
-        var entry = new LeaderboardEntryResponse(1, 1L, "Jamie", 500L, 2L);
+        var entry = new LeaderboardEntryResponse(1, 1L, "Jamie", null, 500L, 2L);
         when(contentMetricsService.businessLeaderboard(any(), any(), any()))
                 .thenReturn(new PageResponse<>(List.of(entry), 0, 20, 1, 1, true));
 
@@ -66,7 +66,7 @@ class LeaderboardControllerTest {
     @Test
     void globalLeaderboard_returns200_forAnyAuthenticatedRole() throws Exception {
         authenticateAs(UserRole.CREATOR);
-        var entry = new LeaderboardEntryResponse(1, 1L, "Jamie", 500L, 2L);
+        var entry = new LeaderboardEntryResponse(1, 1L, "Jamie", null, 500L, 2L);
         when(contentMetricsService.globalLeaderboard(any()))
                 .thenReturn(new PageResponse<>(List.of(entry), 0, 20, 1, 1, true));
 

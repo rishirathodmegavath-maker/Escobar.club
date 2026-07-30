@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { creatorsApi } from "@/api/creators";
 import { Spinner } from "@/components/Spinner";
 import { TickMeter } from "@/components/TickMeter";
+import { Avatar } from "@/components/Avatar";
 
 export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
   const { data, isLoading } = useQuery({
@@ -20,6 +21,10 @@ export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 border-t border-ink-100 pt-4 sm:grid-cols-2">
+      <div className="col-span-full flex items-center gap-3">
+        <Avatar name={data.displayName} imageUrl={data.profilePictureUrl} size={44} />
+        <span className="font-display text-base font-semibold text-ink-900">{data.displayName}</span>
+      </div>
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Bio</p>
         <p className="mt-1 text-sm text-ink-600">{data.bio || "No bio provided."}</p>
@@ -36,18 +41,17 @@ export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
           max={100000}
           accent="gold"
         />
-        {data.socialLinks.length > 0 && (
+        {data.instagramProfileUrl && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Social handles</p>
-            <ul className="mt-1 flex flex-col gap-1">
-              {data.socialLinks.map((link) => (
-                <li key={link}>
-                  <a href={link} target="_blank" rel="noreferrer" className="text-sm text-signal-600 hover:underline">
-                    {link}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Instagram</p>
+            <a
+              href={data.instagramProfileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-signal-600 hover:underline"
+            >
+              {data.instagramProfileUrl}
+            </a>
           </div>
         )}
         {data.portfolioLinks.length > 0 && (

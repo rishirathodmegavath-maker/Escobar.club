@@ -6,9 +6,9 @@ import { useToast } from "@/components/Toast";
 import { Button } from "@/components/Button";
 import { TextArea } from "@/components/Field";
 import { MediaUploadField } from "./MediaUploadField";
-import type { ApplicationRecord, MediaType } from "@/types";
+import type { Campaign, MediaType } from "@/types";
 
-export function ContentSubmitCard({ application }: { application: ApplicationRecord }) {
+export function ContentSubmitCard({ campaign }: { campaign: Campaign }) {
   const [caption, setCaption] = useState("");
   const [media, setMedia] = useState<{ url: string; mediaType: MediaType } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,23 +18,19 @@ export function ContentSubmitCard({ application }: { application: ApplicationRec
   const mutation = useMutation({
     mutationFn: () => {
       if (!media) throw new Error("Please upload media first");
-      return contentApi.submit(application.id, { caption, mediaUrl: media.url, mediaType: media.mediaType });
+      return contentApi.submit(campaign.id, { caption, mediaUrl: media.url, mediaType: media.mediaType });
     },
     onSuccess: () => {
       push("Content submitted for review!", "success");
       queryClient.invalidateQueries({ queryKey: ["content", "me"] });
+      setCaption("");
+      setMedia(null);
     },
     onError: (err) => setError(extractErrorMessage(err, "Could not submit content")),
   });
 
   return (
     <div className="card-surface flex flex-col gap-4 border-signal-200/70 p-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-signal-600">Approved partnership</p>
-        <h3 className="font-display text-lg font-semibold text-ink-900">{application.businessCompanyName}</h3>
-        <p className="text-sm text-ink-400">Upload your first piece of content for this partnership.</p>
-      </div>
-
       {error && <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">{error}</div>}
 
       <MediaUploadField value={media} onChange={setMedia} />

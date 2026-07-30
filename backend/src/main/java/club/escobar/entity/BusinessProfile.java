@@ -30,6 +30,15 @@ public class BusinessProfile {
     @Column(name = "company_name", nullable = false, length = 150)
     private String companyName;
 
+    @Column(name = "gst_number", nullable = false, length = 20)
+    private String gstNumber;
+
+    @Column(name = "contact_person_name", nullable = false, length = 150)
+    private String contactPersonName;
+
+    @Column(name = "mobile_number", nullable = false, length = 20)
+    private String mobileNumber;
+
     @Column(length = 80)
     private String industry;
 

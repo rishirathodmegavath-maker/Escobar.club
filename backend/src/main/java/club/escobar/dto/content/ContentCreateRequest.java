@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ContentCreateRequest(
-        @NotNull Long applicationId,
+        @NotNull Long campaignId,
         @Size(max = 2000) String caption,
         @NotBlank @Size(max = 500) String mediaUrl,
         @NotNull MediaType mediaType

@@ -11,7 +11,7 @@ import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.mapper.CreatorKycMapper;
-import club.escobar.repository.ApplicationRepository;
+import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.CreatorKycServiceImpl;
@@ -35,7 +35,7 @@ class CreatorKycServiceImplTest {
     @Mock
     private CreatorKycProfileRepository creatorKycProfileRepository;
     @Mock
-    private ApplicationRepository applicationRepository;
+    private ContentRepository contentRepository;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -86,7 +86,7 @@ class CreatorKycServiceImplTest {
 
     @Test
     void review_rejectsWhenBusinessHasNoRelationshipToCreator() {
-        when(applicationRepository.existsByCreator_IdAndCampaign_Business_Id(1L, 2L)).thenReturn(false);
+        when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(false);
 
         assertThatThrownBy(() -> creatorKycService.review(2L, 1L, new CreatorKycReviewRequest(KycStatus.VERIFIED, "ok")))
                 .isInstanceOf(ForbiddenActionException.class);
@@ -96,7 +96,7 @@ class CreatorKycServiceImplTest {
     void review_rejectsWhenNotPending() {
         CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
                 .nameOnPan("Jamie").documentUrl("doc.jpg").status(KycStatus.VERIFIED).build();
-        when(applicationRepository.existsByCreator_IdAndCampaign_Business_Id(1L, 2L)).thenReturn(true);
+        when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(true);
         when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
 
         assertThatThrownBy(() -> creatorKycService.review(2L, 1L, new CreatorKycReviewRequest(KycStatus.REJECTED, "no")))
@@ -108,7 +108,7 @@ class CreatorKycServiceImplTest {
         User reviewer = User.builder().id(2L).email("biz@test.com").role(UserRole.BUSINESS).build();
         CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
                 .nameOnPan("Jamie").documentUrl("doc.jpg").status(KycStatus.PENDING).build();
-        when(applicationRepository.existsByCreator_IdAndCampaign_Business_Id(1L, 2L)).thenReturn(true);
+        when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(true);
         when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
         when(userRepository.getReferenceById(2L)).thenReturn(reviewer);
         when(creatorKycProfileRepository.save(any(CreatorKycProfile.class))).thenAnswer(inv -> inv.getArgument(0));

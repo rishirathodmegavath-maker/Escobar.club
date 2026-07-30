@@ -7,8 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "campaigns", indexes = {
@@ -51,6 +53,10 @@ public class Campaign {
     @Builder.Default
     private CampaignStatus status = CampaignStatus.DRAFT;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean urgent = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -59,8 +65,26 @@ public class Campaign {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public boolean isAcceptingApplications() {
+    public boolean isOpenForSubmissions() {
         LocalDate today = LocalDate.now();
         return status == CampaignStatus.ACTIVE && !today.isBefore(startDate) && !today.isAfter(endDate);
+    }
+
+    // A live campaign is "Hot" when the brand marked it urgent, its submission window closes within 72
+    // hours, or its rate is in the top tier of currently-live campaigns (activeRateThreshold, computed by
+    // the caller across all ACTIVE campaigns). Only ever true for campaigns already open for submissions.
+    public boolean isHot(BigDecimal activeRateThreshold) {
+        if (!isOpenForSubmissions()) {
+            return false;
+        }
+        if (urgent) {
+            return true;
+        }
+        Instant deadline = endDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        long hoursLeft = Duration.between(Instant.now(), deadline).toHours();
+        if (hoursLeft <= 72) {
+            return true;
+        }
+        return activeRateThreshold != null && ratePerThousandViewsInr.compareTo(activeRateThreshold) >= 0;
     }
 }

@@ -1,13 +1,14 @@
 import clsx from "clsx";
-import type { ApplicationStatus, CampaignStatus, ContentStatus, KycStatus, PayoutStatus } from "@/types";
+import type { CampaignStatus, ContentStatus, KycStatus, PayoutStatus } from "@/types";
 
-type Status = ApplicationStatus | ContentStatus | CampaignStatus | KycStatus | PayoutStatus;
+type Status = ContentStatus | CampaignStatus | KycStatus | PayoutStatus;
 
 const styles: Record<Status, string> = {
   PENDING: "bg-gold-soft text-gold-deep",
   SUBMITTED: "bg-gold-soft text-gold-deep",
   CHANGES_REQUESTED: "bg-gold-soft text-gold-deep",
   DRAFT: "bg-ink-100 text-ink-500",
+  STARTING_SOON: "bg-gold-soft text-gold-deep",
   APPROVED: "bg-signal-soft text-signal-deep",
   REJECTED: "bg-danger-soft text-danger-deep",
   PUBLISHED: "bg-ink-900 text-paper-50",
@@ -25,6 +26,7 @@ const labels: Record<Status, string> = {
   SUBMITTED: "Submitted",
   CHANGES_REQUESTED: "Changes requested",
   DRAFT: "Draft",
+  STARTING_SOON: "Starting soon",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   PUBLISHED: "Published",
@@ -42,6 +44,7 @@ const dotStyles: Record<Status, string> = {
   SUBMITTED: "bg-gold-500",
   CHANGES_REQUESTED: "bg-gold-500",
   DRAFT: "bg-ink-300",
+  STARTING_SOON: "bg-gold-500",
   APPROVED: "bg-signal-500",
   REJECTED: "bg-danger-500",
   PUBLISHED: "bg-gold-400",

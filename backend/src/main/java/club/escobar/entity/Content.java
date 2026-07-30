@@ -13,7 +13,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "content", indexes = {
-        @Index(name = "idx_content_application", columnList = "application_id"),
         @Index(name = "idx_content_creator", columnList = "creator_id"),
         @Index(name = "idx_content_business", columnList = "business_id"),
         @Index(name = "idx_content_campaign", columnList = "campaign_id"),
@@ -29,10 +28,6 @@ public class Content {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "application_id", nullable = false)
-    private Application application;
 
     // Denormalized for query simplicity on review queues / inboxes.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

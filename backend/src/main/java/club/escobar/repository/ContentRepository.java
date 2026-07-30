@@ -16,7 +16,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByCreator_Id(Long creatorId, Pageable pageable);
 
-    Page<Content> findByApplication_Id(Long applicationId, Pageable pageable);
+    boolean existsByCreator_IdAndBusiness_Id(Long creatorId, Long businessId);
 
     // Ranks creators by the view count of the LATEST metrics snapshot per published content item
     // (not summed history), scoped to one business. The ROW_NUMBER() window function picks the
@@ -24,6 +24,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     @Query(value = """
             SELECT c.creator_id AS creatorId,
                    cp.display_name AS creatorDisplayName,
+                   cp.profile_picture_url AS creatorProfilePictureUrl,
                    SUM(COALESCE(latest.view_count, 0)) AS totalViews,
                    COUNT(DISTINCT c.id) AS publishedContentCount
             FROM content c
@@ -34,7 +35,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             ) latest ON latest.content_id = c.id AND latest.rn = 1
             JOIN creator_profiles cp ON cp.id = c.creator_id
             WHERE c.status = 'PUBLISHED' AND c.business_id = :businessId
-            GROUP BY c.creator_id, cp.display_name
+            GROUP BY c.creator_id, cp.display_name, cp.profile_picture_url
             ORDER BY totalViews DESC, c.creator_id ASC
             """,
             countQuery = """
@@ -49,6 +50,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     @Query(value = """
             SELECT c.creator_id AS creatorId,
                    cp.display_name AS creatorDisplayName,
+                   cp.profile_picture_url AS creatorProfilePictureUrl,
                    SUM(COALESCE(latest.view_count, 0)) AS totalViews,
                    COUNT(DISTINCT c.id) AS publishedContentCount
             FROM content c
@@ -59,7 +61,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             ) latest ON latest.content_id = c.id AND latest.rn = 1
             JOIN creator_profiles cp ON cp.id = c.creator_id
             WHERE c.status = 'PUBLISHED'
-            GROUP BY c.creator_id, cp.display_name
+            GROUP BY c.creator_id, cp.display_name, cp.profile_picture_url
             ORDER BY totalViews DESC, c.creator_id ASC
             """,
             countQuery = """

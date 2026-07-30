@@ -19,10 +19,16 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +59,8 @@ public class CampaignServiceImpl implements CampaignService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .ratePerThousandViewsInr(request.ratePerThousandViewsInr())
-                .status(CampaignStatus.DRAFT)
+                .status(initialStatusFor(request.startDate(), request.endDate()))
+                .urgent(request.urgent())
                 .build());
 
         log.info("Business id={} created campaign id={}", businessUserId, campaign.getId());
@@ -77,6 +84,7 @@ public class CampaignServiceImpl implements CampaignService {
         campaign.setEndDate(request.endDate());
         campaign.setRatePerThousandViewsInr(request.ratePerThousandViewsInr());
         campaign.setStatus(request.status());
+        campaign.setUrgent(request.urgent());
 
         Campaign saved = campaignRepository.save(campaign);
         log.info("Business id={} updated campaign id={} (status={})", businessUserId, campaignId, request.status());
@@ -85,29 +93,80 @@ public class CampaignServiceImpl implements CampaignService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<CampaignResponse> listPublic(String search, Pageable pageable) {
+    public PageResponse<CampaignResponse> listPublic(String search, String category, Pageable pageable) {
         String normalizedSearch = StringUtils.hasText(search) ? search.trim() : null;
-        Page<CampaignResponse> page = campaignRepository.searchPublic(normalizedSearch, pageable)
-                .map(campaignMapper::toResponse);
-        return PageResponse.of(page);
+        BigDecimal rateThreshold = computeActiveRateThreshold();
+
+        if ("HOT".equalsIgnoreCase(category)) {
+            List<Campaign> hotCampaigns = campaignRepository
+                    .searchPublicByStatus(normalizedSearch, CampaignStatus.ACTIVE, Pageable.unpaged())
+                    .getContent()
+                    .stream()
+                    .filter(c -> c.isHot(rateThreshold))
+                    .toList();
+            return PageResponse.of(paginate(hotCampaigns, pageable)
+                    .map(c -> campaignMapper.toResponse(c).withHot(true)));
+        }
+
+        Page<Campaign> page = "LIVE".equalsIgnoreCase(category)
+                ? campaignRepository.searchPublicByStatus(normalizedSearch, CampaignStatus.ACTIVE, pageable)
+                : "UPCOMING".equalsIgnoreCase(category)
+                        ? campaignRepository.searchPublicByStatus(normalizedSearch, CampaignStatus.STARTING_SOON, pageable)
+                        : campaignRepository.searchPublic(normalizedSearch, pageable);
+
+        return PageResponse.of(page.map(c -> campaignMapper.toResponse(c).withHot(c.isHot(rateThreshold))));
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable) {
+        BigDecimal rateThreshold = computeActiveRateThreshold();
         Page<CampaignResponse> page = campaignRepository.findByBusiness_Id(businessUserId, pageable)
-                .map(campaignMapper::toResponse);
+                .map(c -> campaignMapper.toResponse(c).withHot(c.isHot(rateThreshold)));
         return PageResponse.of(page);
+    }
+
+    // Top-quartile rate among currently-live (ACTIVE) campaigns, used as one of the "Hot" criteria.
+    // Null when there are fewer than 2 live campaigns to compare against.
+    private BigDecimal computeActiveRateThreshold() {
+        List<BigDecimal> rates = campaignRepository.findActiveRates();
+        if (rates.size() < 2) {
+            return null;
+        }
+        List<BigDecimal> sorted = rates.stream().sorted(Comparator.naturalOrder()).toList();
+        int index = (int) Math.floor(0.75 * (sorted.size() - 1));
+        return sorted.get(index);
+    }
+
+    private Page<Campaign> paginate(List<Campaign> campaigns, Pageable pageable) {
+        int start = Math.min((int) pageable.getOffset(), campaigns.size());
+        int end = Math.min(start + pageable.getPageSize(), campaigns.size());
+        return new PageImpl<>(campaigns.subList(start, end), pageable, campaigns.size());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CampaignResponse getById(Long campaignId) {
-        return campaignMapper.toResponse(findById(campaignId));
+        Campaign campaign = findById(campaignId);
+        return campaignMapper.toResponse(campaign).withHot(campaign.isHot(computeActiveRateThreshold()));
     }
 
     private Campaign findById(Long campaignId) {
         return campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id " + campaignId));
+    }
+
+    // A newly created campaign is never left in DRAFT: it opens as either "starting soon" (start date
+    // still ahead) or immediately ACTIVE (start date already within range), and CLOSED only if the whole
+    // window is already in the past.
+    private CampaignStatus initialStatusFor(LocalDate startDate, LocalDate endDate) {
+        LocalDate today = LocalDate.now();
+        if (today.isAfter(endDate)) {
+            return CampaignStatus.CLOSED;
+        }
+        if (today.isBefore(startDate)) {
+            return CampaignStatus.STARTING_SOON;
+        }
+        return CampaignStatus.ACTIVE;
     }
 }

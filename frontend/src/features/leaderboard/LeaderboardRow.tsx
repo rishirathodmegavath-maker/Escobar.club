@@ -30,7 +30,7 @@ export function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
       </td>
       <td className="py-3 pr-4">
         <div className="flex items-center gap-3">
-          <Avatar name={entry.creatorDisplayName} size={32} />
+          <Avatar name={entry.creatorDisplayName} imageUrl={entry.creatorProfilePictureUrl} size={32} />
           <span className="font-medium text-ink-900">{entry.creatorDisplayName}</span>
         </div>
       </td>

@@ -5,11 +5,9 @@ import club.escobar.dto.content.ContentPublishRequest;
 import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.content.ContentUpdateRequest;
-import club.escobar.entity.Application;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
 import club.escobar.entity.User;
-import club.escobar.entity.enums.ApplicationStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
@@ -17,7 +15,7 @@ import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.mapper.ContentMapper;
-import club.escobar.repository.ApplicationRepository;
+import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.ContentServiceImpl;
@@ -27,12 +25,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +41,7 @@ class ContentServiceImplTest {
     @Mock
     private ContentRepository contentRepository;
     @Mock
-    private ApplicationRepository applicationRepository;
+    private CampaignRepository campaignRepository;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -57,11 +52,10 @@ class ContentServiceImplTest {
     private User creator;
     private User business;
     private Campaign campaign;
-    private Application application;
 
     @BeforeEach
     void setUp() {
-        contentService = new ContentServiceImpl(contentRepository, applicationRepository, userRepository, contentMapper);
+        contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository, contentMapper);
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).build();
         business = User.builder().id(2L).email("business@test.com").role(UserRole.BUSINESS).build();
         campaign = Campaign.builder()
@@ -69,19 +63,16 @@ class ContentServiceImplTest {
                 .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(30))
                 .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.ACTIVE)
                 .build();
-        application = Application.builder().id(5L).creator(creator).campaign(campaign)
-                .status(ApplicationStatus.APPROVED).pitchMessage("pitch").build();
     }
 
     @Test
-    void submit_createsContentInSubmittedStatus_whenApplicationApproved() {
-        when(applicationRepository.findById(5L)).thenReturn(Optional.of(application));
-        when(contentRepository.findByApplication_Id(eq(5L), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of()));
+    void submit_createsContentInSubmittedStatus_whenCampaignOpen() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
         when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
 
-        contentService.submit(1L, new ContentCreateRequest(5L, "caption", "http://x/media.png", MediaType.IMAGE));
+        contentService.submit(1L, new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE));
 
         ArgumentCaptor<Content> captor = ArgumentCaptor.forClass(Content.class);
         verify(contentRepository).save(captor.capture());
@@ -89,30 +80,36 @@ class ContentServiceImplTest {
         assertThat(captor.getValue().getVersion()).isEqualTo(1);
         assertThat(captor.getValue().getCampaign()).isEqualTo(campaign);
         assertThat(captor.getValue().getBusiness()).isEqualTo(business);
+        assertThat(captor.getValue().getCreator()).isEqualTo(creator);
     }
 
     @Test
-    void submit_rejectsWhenApplicationNotApproved() {
-        application.setStatus(ApplicationStatus.PENDING);
-        when(applicationRepository.findById(5L)).thenReturn(Optional.of(application));
+    void submit_allowsMultipleSubmissionsToTheSameCampaign() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.submit(1L, new ContentCreateRequest(3L, "first", "http://x/media1.png", MediaType.IMAGE));
+        contentService.submit(1L, new ContentCreateRequest(3L, "second", "http://x/media2.png", MediaType.IMAGE));
+
+        verify(contentRepository, times(2)).save(any(Content.class));
+    }
+
+    @Test
+    void submit_rejectsWhenCampaignNotOpenForSubmissions() {
+        campaign.setStatus(CampaignStatus.DRAFT);
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
 
         assertThatThrownBy(() -> contentService.submit(1L,
-                new ContentCreateRequest(5L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
                 .isInstanceOf(InvalidStateTransitionException.class);
     }
 
     @Test
-    void submit_rejectsWhenCreatorDoesNotOwnApplication() {
-        when(applicationRepository.findById(5L)).thenReturn(Optional.of(application));
-
-        assertThatThrownBy(() -> contentService.submit(99L,
-                new ContentCreateRequest(5L, "caption", "http://x/media.png", MediaType.IMAGE)))
-                .isInstanceOf(ForbiddenActionException.class);
-    }
-
-    @Test
     void resubmit_incrementsVersionAndReturnsToSubmitted_whenChangesWereRequested() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.CHANGES_REQUESTED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
         when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -127,7 +124,7 @@ class ContentServiceImplTest {
 
     @Test
     void resubmit_rejectsWhenStatusIsNotChangesRequested() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
 
@@ -138,7 +135,7 @@ class ContentServiceImplTest {
 
     @Test
     void review_rejectsReviewingDraftContent() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.DRAFT).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
 
@@ -149,7 +146,7 @@ class ContentServiceImplTest {
 
     @Test
     void review_appendsNoteToHistory_withoutOverwritingPriorNotes() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(2).build();
         content.addReviewNote(club.escobar.entity.ContentReviewNote.builder()
                 .authoredBy(business).contentVersion(1).decision(ContentStatus.CHANGES_REQUESTED).noteText("fix lighting").build());
@@ -169,7 +166,7 @@ class ContentServiceImplTest {
 
     @Test
     void review_rejectsWhenContentNotOwnedByBusiness() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
 
@@ -180,7 +177,7 @@ class ContentServiceImplTest {
 
     @Test
     void publish_transitionsApprovedToPublished_andStoresUrlAndTimestamp() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.APPROVED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
         when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -195,7 +192,7 @@ class ContentServiceImplTest {
 
     @Test
     void publish_rejectsWhenNotApproved() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
 
@@ -206,7 +203,7 @@ class ContentServiceImplTest {
 
     @Test
     void publish_rejectsWhenNotOwnedByCreator() {
-        Content content = Content.builder().id(20L).application(application).creator(creator).campaign(campaign).business(business)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.APPROVED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
 

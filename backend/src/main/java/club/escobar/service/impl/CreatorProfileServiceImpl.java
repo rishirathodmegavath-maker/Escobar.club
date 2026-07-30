@@ -38,9 +38,11 @@ public class CreatorProfileServiceImpl implements CreatorProfileService {
 
         profile.setDisplayName(request.displayName());
         profile.setBio(request.bio());
+        profile.setProfilePictureUrl(request.profilePictureUrl());
         profile.setNiche(request.niche());
+        profile.setOpenToOtherNiches(request.openToOtherNiches());
+        profile.setInstagramProfileUrl(request.instagramProfileUrl());
         profile.setFollowerCount(request.followerCount());
-        profile.setSocialLinks(request.socialLinks() == null ? new ArrayList<>() : new ArrayList<>(request.socialLinks()));
         profile.setPortfolioLinks(request.portfolioLinks() == null ? new ArrayList<>() : new ArrayList<>(request.portfolioLinks()));
 
         CreatorProfile saved = creatorProfileRepository.save(profile);

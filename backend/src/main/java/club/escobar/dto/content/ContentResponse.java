@@ -8,13 +8,14 @@ import java.util.List;
 
 public record ContentResponse(
         Long id,
-        Long applicationId,
         Long creatorId,
         String creatorDisplayName,
+        String creatorProfilePictureUrl,
         Long campaignId,
         String campaignTitle,
         Long businessId,
         String businessCompanyName,
+        String businessLogoUrl,
         String caption,
         String mediaUrl,
         MediaType mediaType,

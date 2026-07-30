@@ -5,6 +5,8 @@ public interface LeaderboardRow {
 
     String getCreatorDisplayName();
 
+    String getCreatorProfilePictureUrl();
+
     Long getTotalViews();
 
     Long getPublishedContentCount();

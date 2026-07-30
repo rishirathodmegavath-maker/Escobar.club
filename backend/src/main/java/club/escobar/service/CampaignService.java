@@ -12,7 +12,7 @@ public interface CampaignService {
 
     CampaignResponse update(Long businessUserId, Long campaignId, CampaignUpdateRequest request);
 
-    PageResponse<CampaignResponse> listPublic(String search, Pageable pageable);
+    PageResponse<CampaignResponse> listPublic(String search, String category, Pageable pageable);
 
     PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable);
 

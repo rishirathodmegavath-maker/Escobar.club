@@ -10,10 +10,19 @@ export interface BusinessSearchParams {
 
 export interface BusinessUpdatePayload {
   companyName: string;
+  gstNumber: string;
+  contactPersonName: string;
+  mobileNumber: string;
   industry: string;
   description: string;
   logoUrl: string;
   website: string;
+}
+
+export interface LogoUploadResult {
+  url: string;
+  contentType: string;
+  sizeBytes: number;
 }
 
 export const businessesApi = {
@@ -25,4 +34,16 @@ export const businessesApi = {
   getMine: () => apiClient.get<BusinessProfile>("/businesses/me").then((r) => r.data),
   updateMine: (payload: BusinessUpdatePayload) =>
     apiClient.put<BusinessProfile>("/businesses/me", payload).then((r) => r.data),
+  uploadLogo: (file: File, onProgress?: (percent: number) => void) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post<LogoUploadResult>("/media/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (evt) => {
+          if (onProgress && evt.total) onProgress(Math.round((evt.loaded / evt.total) * 100));
+        },
+      })
+      .then((r) => r.data);
+  },
 };

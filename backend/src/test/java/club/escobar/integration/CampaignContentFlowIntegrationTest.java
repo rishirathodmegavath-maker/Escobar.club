@@ -1,8 +1,5 @@
 package club.escobar.integration;
 
-import club.escobar.dto.application.ApplicationCreateRequest;
-import club.escobar.dto.application.ApplicationResponse;
-import club.escobar.dto.application.ApplicationStatusUpdateRequest;
 import club.escobar.dto.auth.AuthResponse;
 import club.escobar.dto.auth.RegisterRequest;
 import club.escobar.dto.campaign.CampaignCreateRequest;
@@ -12,7 +9,6 @@ import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.content.ContentUpdateRequest;
-import club.escobar.entity.enums.ApplicationStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
@@ -30,7 +26,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
+class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
 
     @LocalServerPort
     private int port;
@@ -73,31 +69,14 @@ class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void fullLifecycle_fromApplicationToApprovedContent_withChangeRequestRoundTrip() {
+    void fullLifecycle_fromDirectSubmissionToApprovedContent_withChangeRequestRoundTrip() {
         AuthResponse creatorAuth = registerAndLogin("creator1@test.com", UserRole.CREATOR, "Jamie Creator");
         AuthResponse businessAuth = registerAndLogin("business1@test.com", UserRole.BUSINESS, "Acme Co");
         Long campaignId = createActiveCampaign(businessAuth, "Acme Summer Launch");
 
-        // 1. Creator applies to the campaign
-        var applyResponse = rest.exchange(baseUrl() + "/api/applications", HttpMethod.POST,
-                new HttpEntity<>(new ApplicationCreateRequest(campaignId, "I would love to promote your brand"),
-                        authHeaders(creatorAuth.accessToken())),
-                ApplicationResponse.class);
-        assertThat(applyResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        Long applicationId = applyResponse.getBody().id();
-        assertThat(applyResponse.getBody().status()).isEqualTo(ApplicationStatus.PENDING);
-
-        // 2. Business approves the application
-        var approveResponse = rest.exchange(baseUrl() + "/api/applications/" + applicationId + "/status", HttpMethod.PATCH,
-                new HttpEntity<>(new ApplicationStatusUpdateRequest(ApplicationStatus.APPROVED, "Welcome!"),
-                        authHeaders(businessAuth.accessToken())),
-                ApplicationResponse.class);
-        assertThat(approveResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(approveResponse.getBody().status()).isEqualTo(ApplicationStatus.APPROVED);
-
-        // 3. Creator submits content
-        var submitResponse = rest.exchange(baseUrl() + "/api/applications/" + applicationId + "/content", HttpMethod.POST,
-                new HttpEntity<>(new ContentCreateRequest(applicationId, "Check out this post!", "http://media/1.png", MediaType.IMAGE),
+        // 1. Creator submits content directly, with no application/approval step
+        var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
+                new HttpEntity<>(new ContentCreateRequest(campaignId, "Check out this post!", "http://media/1.png", MediaType.IMAGE),
                         authHeaders(creatorAuth.accessToken())),
                 ContentResponse.class);
         assertThat(submitResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -105,7 +84,7 @@ class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(submitResponse.getBody().status()).isEqualTo(ContentStatus.SUBMITTED);
         assertThat(submitResponse.getBody().version()).isEqualTo(1);
 
-        // 4. Business requests changes
+        // 2. Business requests changes
         var changesResponse = rest.exchange(baseUrl() + "/api/content/" + contentId + "/review", HttpMethod.PATCH,
                 new HttpEntity<>(new ContentReviewRequest(ContentStatus.CHANGES_REQUESTED, "Please brighten the photo"),
                         authHeaders(businessAuth.accessToken())),
@@ -114,7 +93,7 @@ class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(changesResponse.getBody().status()).isEqualTo(ContentStatus.CHANGES_REQUESTED);
         assertThat(changesResponse.getBody().reviewNotes()).hasSize(1);
 
-        // 5. Creator resubmits (new version), history is preserved not overwritten
+        // 3. Creator resubmits (new version), history is preserved not overwritten
         var resubmitResponse = rest.exchange(baseUrl() + "/api/content/" + contentId, HttpMethod.PATCH,
                 new HttpEntity<>(new ContentUpdateRequest("Brighter version!", "http://media/2.png", MediaType.IMAGE),
                         authHeaders(creatorAuth.accessToken())),
@@ -123,7 +102,7 @@ class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(resubmitResponse.getBody().status()).isEqualTo(ContentStatus.SUBMITTED);
         assertThat(resubmitResponse.getBody().version()).isEqualTo(2);
 
-        // 6. Business approves the resubmission
+        // 4. Business approves the resubmission
         var finalApproval = rest.exchange(baseUrl() + "/api/content/" + contentId + "/review", HttpMethod.PATCH,
                 new HttpEntity<>(new ContentReviewRequest(ContentStatus.APPROVED, "Looks great now"),
                         authHeaders(businessAuth.accessToken())),
@@ -136,19 +115,40 @@ class ApplicationAndContentFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void submittingContent_forUnapprovedApplication_isRejected() {
+    void creatorCanSubmitMultiplePiecesOfContent_toTheSameCampaign() {
         AuthResponse creatorAuth = registerAndLogin("creator2@test.com", UserRole.CREATOR, "Alex Creator");
         AuthResponse businessAuth = registerAndLogin("business2@test.com", UserRole.BUSINESS, "Beta Co");
         Long campaignId = createActiveCampaign(businessAuth, "Beta Launch");
 
-        var applyResponse = rest.exchange(baseUrl() + "/api/applications", HttpMethod.POST,
-                new HttpEntity<>(new ApplicationCreateRequest(campaignId, "Pitch message"),
+        var first = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
+                new HttpEntity<>(new ContentCreateRequest(campaignId, "first piece", "http://media/1.png", MediaType.IMAGE),
                         authHeaders(creatorAuth.accessToken())),
-                ApplicationResponse.class);
-        Long applicationId = applyResponse.getBody().id();
+                ContentResponse.class);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-        var submitResponse = rest.exchange(baseUrl() + "/api/applications/" + applicationId + "/content", HttpMethod.POST,
-                new HttpEntity<>(new ContentCreateRequest(applicationId, "caption", "http://media/1.png", MediaType.IMAGE),
+        var second = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
+                new HttpEntity<>(new ContentCreateRequest(campaignId, "second piece", "http://media/2.png", MediaType.IMAGE),
+                        authHeaders(creatorAuth.accessToken())),
+                ContentResponse.class);
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(second.getBody().id()).isNotEqualTo(first.getBody().id());
+    }
+
+    @Test
+    void submittingContent_toACampaignNotAcceptingSubmissions_isRejected() {
+        AuthResponse creatorAuth = registerAndLogin("creator3@test.com", UserRole.CREATOR, "Jordan Creator");
+        AuthResponse businessAuth = registerAndLogin("business3@test.com", UserRole.BUSINESS, "Gamma Co");
+
+        var createResponse = rest.exchange(baseUrl() + "/api/campaigns", HttpMethod.POST,
+                new HttpEntity<>(new CampaignCreateRequest("Gamma Launch", "Campaign description",
+                        LocalDate.now().plusDays(10), LocalDate.now().plusDays(30), new BigDecimal("100.00")),
+                        authHeaders(businessAuth.accessToken())),
+                CampaignResponse.class);
+        Long campaignId = createResponse.getBody().id();
+        // Left as DRAFT (not activated), so it should not accept submissions.
+
+        var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
+                new HttpEntity<>(new ContentCreateRequest(campaignId, "caption", "http://media/1.png", MediaType.IMAGE),
                         authHeaders(creatorAuth.accessToken())),
                 String.class);
 

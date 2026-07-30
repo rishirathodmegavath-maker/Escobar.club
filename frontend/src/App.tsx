@@ -6,11 +6,10 @@ import { DiscoverCampaignsPage } from "@/pages/DiscoverCampaignsPage";
 import { CampaignDetailPage } from "@/pages/CampaignDetailPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
-import { CreatorApplicationsPage } from "@/pages/creator/CreatorApplicationsPage";
+import { CreatorHelpPage } from "@/pages/CreatorHelpPage";
 import { CreatorContentPage } from "@/pages/creator/CreatorContentPage";
 import { CreatorProfilePage } from "@/pages/creator/CreatorProfilePage";
 import { CreatorKycPage } from "@/pages/creator/CreatorKycPage";
-import { BusinessApplicationsInboxPage } from "@/pages/business/BusinessApplicationsInboxPage";
 import { BusinessContentReviewPage } from "@/pages/business/BusinessContentReviewPage";
 import { BusinessProfilePage } from "@/pages/business/BusinessProfilePage";
 import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPage";
@@ -26,6 +25,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/help" element={<CreatorHelpPage />} />
 
       <Route
         path="/"
@@ -45,16 +45,6 @@ export default function App() {
       />
       <Route path="/businesses/:id" element={<Navigate to="/" replace />} />
 
-      <Route
-        path="/creator/applications"
-        element={
-          <ProtectedRoute allowedRoles={["CREATOR"]}>
-            <AppShell>
-              <CreatorApplicationsPage />
-            </AppShell>
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/creator/content"
         element={
@@ -86,16 +76,6 @@ export default function App() {
         }
       />
 
-      <Route
-        path="/business/applications"
-        element={
-          <ProtectedRoute allowedRoles={["BUSINESS"]}>
-            <AppShell>
-              <BusinessApplicationsInboxPage />
-            </AppShell>
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/business/content"
         element={

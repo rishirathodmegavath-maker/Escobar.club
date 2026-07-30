@@ -96,3 +96,42 @@ export const IdCardIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M14.5 12.5h4" />
   </svg>
 );
+
+export const HelpCircleIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.3 9.2a2.7 2.7 0 0 1 5.2.9c0 1.8-2.3 2-2.3 3.6" />
+    <circle cx="12" cy="17.2" r="0.15" fill="currentColor" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
+export const PersonPlusIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="10" cy="8" r="3.4" />
+    <path d="M3.5 20c1.2-3.6 3.8-5.4 6.5-5.4s5.3 1.8 6.5 5.4" />
+    <path d="M18.5 8v5" />
+    <path d="M16 10.5h5" />
+  </svg>
+);
+
+export const VideoIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="3" y="6" width="13" height="12" rx="2" />
+    <path d="M16 10l5-3v10l-5-3" />
+  </svg>
+);
+
+export const EyeIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const CoinIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5v9" />
+    <path d="M14.7 9.8a2.7 2.7 0 0 0-2.5-1.3c-1.5 0-2.7.8-2.7 2s1.2 1.7 2.7 2 2.7.8 2.7 2-1.2 2-2.7 2a2.9 2.9 0 0 1-2.6-1.4" />
+  </svg>
+);

@@ -9,12 +9,16 @@ import { useToast } from "@/components/Toast";
 import { Button } from "@/components/Button";
 import { Input, TextArea } from "@/components/Field";
 import { FullPageSpinner } from "@/components/Spinner";
+import { ImageUploadField } from "@/components/ImageUploadField";
 
 const schema = z.object({
   companyName: z.string().min(2).max(150),
+  gstNumber: z.string().min(1, "GST Number is required").max(20),
+  contactPersonName: z.string().min(1, "Contact person name is required").max(150),
+  mobileNumber: z.string().min(1, "Mobile number is required").max(20),
   industry: z.string().max(80).optional().or(z.literal("")),
   description: z.string().max(4000).optional().or(z.literal("")),
-  logoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  logoUrl: z.string().optional().or(z.literal("")),
   website: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 });
 type FormValues = z.infer<typeof schema>;
@@ -29,6 +33,7 @@ export function BusinessProfilePage() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -36,6 +41,9 @@ export function BusinessProfilePage() {
     if (data) {
       reset({
         companyName: data.companyName,
+        gstNumber: data.gstNumber,
+        contactPersonName: data.contactPersonName,
+        mobileNumber: data.mobileNumber,
         industry: data.industry ?? "",
         description: data.description ?? "",
         logoUrl: data.logoUrl ?? "",
@@ -48,6 +56,9 @@ export function BusinessProfilePage() {
     mutationFn: (values: FormValues) =>
       businessesApi.updateMine({
         companyName: values.companyName,
+        gstNumber: values.gstNumber,
+        contactPersonName: values.contactPersonName,
+        mobileNumber: values.mobileNumber,
         industry: values.industry ?? "",
         description: values.description ?? "",
         logoUrl: values.logoUrl ?? "",
@@ -70,12 +81,17 @@ export function BusinessProfilePage() {
       <p className="mt-1.5 mb-6 text-ink-500">This is your public page — creators will see this before applying.</p>
 
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="card-surface flex flex-col gap-5 p-7">
-        {logoUrl && (
-          <img src={logoUrl} alt="" className="h-16 w-16 rounded-xl object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
-        )}
-        <Input label="Company name" error={errors.companyName?.message} {...register("companyName")} />
+        <ImageUploadField
+          label="Company logo"
+          value={logoUrl}
+          uploadFn={businessesApi.uploadLogo}
+          onChange={(url) => setValue("logoUrl", url, { shouldDirty: true })}
+        />
+        <Input label="Company Legal Name" error={errors.companyName?.message} {...register("companyName")} />
+        <Input label="GST Number" error={errors.gstNumber?.message} {...register("gstNumber")} />
+        <Input label="Contact Person Name" error={errors.contactPersonName?.message} {...register("contactPersonName")} />
+        <Input label="Mobile Number" type="tel" error={errors.mobileNumber?.message} {...register("mobileNumber")} />
         <Input label="Industry" placeholder="e.g. Apparel, F&B, SaaS" error={errors.industry?.message} {...register("industry")} />
-        <Input label="Logo URL" placeholder="https://…" error={errors.logoUrl?.message} {...register("logoUrl")} />
         <Input label="Website" placeholder="https://…" error={errors.website?.message} {...register("website")} />
         <TextArea label="Public description" rows={5} error={errors.description?.message} {...register("description")} />
 

@@ -15,6 +15,7 @@ public record CampaignUpdateRequest(
         @NotNull LocalDate startDate,
         @NotNull LocalDate endDate,
         @NotNull @DecimalMin("0.01") BigDecimal ratePerThousandViewsInr,
-        @NotNull CampaignStatus status
+        @NotNull CampaignStatus status,
+        boolean urgent
 ) {
 }

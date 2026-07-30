@@ -25,13 +25,13 @@ public class ContentController {
 
     private final ContentService contentService;
 
-    @PostMapping("/api/applications/{id}/content")
+    @PostMapping("/api/campaigns/{id}/content")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ContentResponse> submit(
             @AuthenticationPrincipal SecurityUser user,
-            @PathVariable("id") Long applicationId,
+            @PathVariable("id") Long campaignId,
             @Valid @RequestBody ContentCreateRequest request) {
-        ContentCreateRequest scoped = new ContentCreateRequest(applicationId, request.caption(), request.mediaUrl(), request.mediaType());
+        ContentCreateRequest scoped = new ContentCreateRequest(campaignId, request.caption(), request.mediaUrl(), request.mediaType());
         return ResponseEntity.status(HttpStatus.CREATED).body(contentService.submit(user.getId(), scoped));
     }
 

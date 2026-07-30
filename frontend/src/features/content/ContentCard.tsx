@@ -12,6 +12,7 @@ import { PayoutPanel } from "./PayoutPanel";
 import { contentApi } from "@/api/content";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
+import { Avatar } from "@/components/Avatar";
 
 export function ContentCard({ content }: { content: ContentRecord }) {
   const [editing, setEditing] = useState(false);
@@ -40,9 +41,12 @@ export function ContentCard({ content }: { content: ContentRecord }) {
   return (
     <div className="card-surface flex flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-display text-lg font-semibold text-ink-900">{content.businessCompanyName}</h3>
-          <p className="text-xs text-ink-400">Version {content.version}</p>
+        <div className="flex items-center gap-3">
+          <Avatar name={content.businessCompanyName} imageUrl={content.businessLogoUrl} size={40} />
+          <div>
+            <h3 className="font-display text-lg font-semibold text-ink-900">{content.businessCompanyName}</h3>
+            <p className="text-xs text-ink-400">Version {content.version}</p>
+          </div>
         </div>
         <StatusPill status={content.status} />
       </div>

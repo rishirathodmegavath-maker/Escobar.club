@@ -6,17 +6,16 @@ import club.escobar.dto.content.ContentPublishRequest;
 import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.content.ContentUpdateRequest;
-import club.escobar.entity.Application;
+import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
 import club.escobar.entity.ContentReviewNote;
 import club.escobar.entity.User;
-import club.escobar.entity.enums.ApplicationStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.ContentMapper;
-import club.escobar.repository.ApplicationRepository;
+import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.ContentService;
@@ -41,36 +40,27 @@ public class ContentServiceImpl implements ContentService {
             EnumSet.of(ContentStatus.APPROVED, ContentStatus.REJECTED, ContentStatus.CHANGES_REQUESTED);
 
     private final ContentRepository contentRepository;
-    private final ApplicationRepository applicationRepository;
+    private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
     private final ContentMapper contentMapper;
 
     @Override
     @Transactional
     public ContentResponse submit(Long creatorUserId, ContentCreateRequest request) {
-        Application application = applicationRepository.findById(request.applicationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id " + request.applicationId()));
+        Campaign campaign = campaignRepository.findById(request.campaignId())
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id " + request.campaignId()));
+        User creator = userRepository.findById(creatorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (!application.getCreator().getId().equals(creatorUserId)) {
-            throw new ForbiddenActionException("This application does not belong to you");
-        }
-        if (application.getStatus() != ApplicationStatus.APPROVED) {
+        if (!campaign.isOpenForSubmissions()) {
             throw new InvalidStateTransitionException(
-                    "Content can only be submitted for an approved application (current status: " + application.getStatus() + ")");
-        }
-
-        boolean alreadyHasContent = contentRepository.findByApplication_Id(application.getId(),
-                org.springframework.data.domain.Pageable.unpaged()).hasContent();
-        if (alreadyHasContent) {
-            throw new InvalidStateTransitionException(
-                    "This application already has submitted content; use resubmit to update it");
+                    "This campaign is not currently accepting content submissions (status: " + campaign.getStatus() + ")");
         }
 
         Content content = Content.builder()
-                .application(application)
-                .creator(application.getCreator())
-                .campaign(application.getCampaign())
-                .business(application.getCampaign().getBusiness())
+                .creator(creator)
+                .campaign(campaign)
+                .business(campaign.getBusiness())
                 .caption(request.caption())
                 .mediaUrl(request.mediaUrl())
                 .mediaType(request.mediaType())
@@ -80,7 +70,7 @@ public class ContentServiceImpl implements ContentService {
                 .build();
 
         Content saved = contentRepository.save(content);
-        log.info("Creator id={} submitted content id={} for application id={}", creatorUserId, saved.getId(), application.getId());
+        log.info("Creator id={} submitted content id={} for campaign id={}", creatorUserId, saved.getId(), campaign.getId());
         return contentMapper.toResponse(saved);
     }
 

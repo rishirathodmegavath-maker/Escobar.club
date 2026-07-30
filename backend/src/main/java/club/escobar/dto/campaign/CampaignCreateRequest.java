@@ -13,6 +13,7 @@ public record CampaignCreateRequest(
         @Size(max = 4000) String description,
         @NotNull LocalDate startDate,
         @NotNull LocalDate endDate,
-        @NotNull @DecimalMin("0.01") BigDecimal ratePerThousandViewsInr
+        @NotNull @DecimalMin("0.01") BigDecimal ratePerThousandViewsInr,
+        boolean urgent
 ) {
 }

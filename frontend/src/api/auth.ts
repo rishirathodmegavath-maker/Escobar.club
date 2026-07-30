@@ -6,6 +6,9 @@ export interface RegisterPayload {
   password: string;
   role: UserRole;
   displayName: string;
+  gstNumber?: string;
+  contactPersonName?: string;
+  mobileNumber?: string;
 }
 
 export interface LoginPayload {

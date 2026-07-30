@@ -7,6 +7,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Field";
 import { extractErrorMessage } from "@/api/client";
+import { HelpCircleIcon } from "@/components/icons";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -31,14 +32,23 @@ export function LoginPage() {
     try {
       const user = await login(values);
       const from = (location.state as { from?: Location })?.from?.pathname;
-      navigate(from ?? (user.role === "BUSINESS" ? "/business/applications" : "/"), { replace: true });
+      navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
     } catch (err) {
       setServerError(extractErrorMessage(err, "Invalid email or password"));
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-paper px-4">
+      <Link
+        to="/help"
+        aria-label="Help for creators"
+        title="Help for creators"
+        className="focus-ring absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-ink-200 bg-white text-ink-500 shadow-card hover:border-signal-300 hover:text-signal-700"
+      >
+        <HelpCircleIcon className="h-5 w-5" />
+      </Link>
+
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gold-400 text-ink-900">

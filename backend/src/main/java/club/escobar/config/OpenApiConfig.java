@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
         info = @Info(
                 title = "Escobar.Club API",
                 version = "1.0.0",
-                description = "Creator/business application and content review platform API"
+                description = "Creator/business partnership and content review platform API"
         ),
         security = @SecurityRequirement(name = "bearerAuth")
 )
