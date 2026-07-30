@@ -105,7 +105,7 @@ public class CampaignServiceImpl implements CampaignService {
                     .filter(c -> c.isHot(rateThreshold))
                     .toList();
             return PageResponse.of(paginate(hotCampaigns, pageable)
-                    .map(c -> campaignMapper.toResponse(c).withHot(true)));
+                    .map(c -> withHot(campaignMapper.toResponse(c), true)));
         }
 
         Page<Campaign> page = "LIVE".equalsIgnoreCase(category)
@@ -114,7 +114,7 @@ public class CampaignServiceImpl implements CampaignService {
                         ? campaignRepository.searchPublicByStatus(normalizedSearch, CampaignStatus.STARTING_SOON, pageable)
                         : campaignRepository.searchPublic(normalizedSearch, pageable);
 
-        return PageResponse.of(page.map(c -> campaignMapper.toResponse(c).withHot(c.isHot(rateThreshold))));
+        return PageResponse.of(page.map(c -> withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold))));
     }
 
     @Override
@@ -122,8 +122,15 @@ public class CampaignServiceImpl implements CampaignService {
     public PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable) {
         BigDecimal rateThreshold = computeActiveRateThreshold();
         Page<CampaignResponse> page = campaignRepository.findByBusiness_Id(businessUserId, pageable)
-                .map(c -> campaignMapper.toResponse(c).withHot(c.isHot(rateThreshold)));
+                .map(c -> withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)));
         return PageResponse.of(page);
+    }
+
+    private static CampaignResponse withHot(CampaignResponse response, boolean hot) {
+        return new CampaignResponse(response.id(), response.businessId(), response.businessCompanyName(),
+                response.businessLogoUrl(), response.title(), response.description(), response.startDate(),
+                response.endDate(), response.ratePerThousandViewsInr(), response.status(),
+                response.acceptingSubmissions(), response.urgent(), hot, response.createdAt(), response.updatedAt());
     }
 
     // Top-quartile rate among currently-live (ACTIVE) campaigns, used as one of the "Hot" criteria.
@@ -148,7 +155,7 @@ public class CampaignServiceImpl implements CampaignService {
     @Transactional(readOnly = true)
     public CampaignResponse getById(Long campaignId) {
         Campaign campaign = findById(campaignId);
-        return campaignMapper.toResponse(campaign).withHot(campaign.isHot(computeActiveRateThreshold()));
+        return withHot(campaignMapper.toResponse(campaign), campaign.isHot(computeActiveRateThreshold()));
     }
 
     private Campaign findById(Long campaignId) {

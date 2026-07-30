@@ -50,7 +50,9 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
 
     private AuthResponse registerAndLogin(String email, UserRole role, String displayName) {
         var response = rest.postForEntity(baseUrl() + "/api/auth/register",
-                new RegisterRequest(email, "password123", role, displayName), AuthResponse.class);
+                new RegisterRequest(email, "password123", role, displayName,
+                        "22AAAAA0000A1Z5", "Contact Person", "9876543210"),
+                AuthResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return response.getBody();
     }
@@ -64,14 +66,14 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
     private Long createActiveCampaign(AuthResponse businessAuth, String title) {
         var createResponse = rest.exchange(baseUrl() + "/api/campaigns", HttpMethod.POST,
                 new HttpEntity<>(new CampaignCreateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00")),
+                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), false),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         Long campaignId = createResponse.getBody().id();
 
         rest.exchange(baseUrl() + "/api/campaigns/" + campaignId, HttpMethod.PUT,
                 new HttpEntity<>(new CampaignUpdateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), CampaignStatus.ACTIVE),
+                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), CampaignStatus.ACTIVE, false),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         return campaignId;

@@ -58,7 +58,7 @@ class CampaignServiceImplTest {
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
         campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00")));
+                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false));
 
         var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
         verify(campaignRepository).save(captor.capture());
@@ -73,7 +73,7 @@ class CampaignServiceImplTest {
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
         campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now().plusDays(5), LocalDate.now().plusDays(10), new BigDecimal("100.00")));
+                LocalDate.now().plusDays(5), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false));
 
         var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
         verify(campaignRepository).save(captor.capture());
@@ -87,7 +87,7 @@ class CampaignServiceImplTest {
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
         campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new BigDecimal("100.00")));
+                LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new BigDecimal("100.00"), false));
 
         var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
         verify(campaignRepository).save(captor.capture());
@@ -99,7 +99,7 @@ class CampaignServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
 
         assertThatThrownBy(() -> campaignService.create(1L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"))))
+                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false)))
                 .isInstanceOf(ForbiddenActionException.class);
     }
 
@@ -108,7 +108,7 @@ class CampaignServiceImplTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(business));
 
         assertThatThrownBy(() -> campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().minusDays(1), new BigDecimal("100.00"))))
+                LocalDate.now(), LocalDate.now().minusDays(1), new BigDecimal("100.00"), false)))
                 .isInstanceOf(InvalidStateTransitionException.class);
     }
 
@@ -120,7 +120,7 @@ class CampaignServiceImplTest {
         when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
 
         assertThatThrownBy(() -> campaignService.update(999L, 5L, new CampaignUpdateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), CampaignStatus.ACTIVE)))
+                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), CampaignStatus.ACTIVE, false)))
                 .isInstanceOf(ForbiddenActionException.class);
     }
 
@@ -134,7 +134,7 @@ class CampaignServiceImplTest {
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
         campaignService.update(2L, 5L, new CampaignUpdateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("150.00"), CampaignStatus.ACTIVE));
+                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("150.00"), CampaignStatus.ACTIVE, false));
 
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
         assertThat(campaign.getRatePerThousandViewsInr()).isEqualByComparingTo(new BigDecimal("150.00"));

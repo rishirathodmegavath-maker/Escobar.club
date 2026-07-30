@@ -47,7 +47,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegisterRequest(
-                                "creator@test.com", "password123", UserRole.CREATOR, "Jamie Creator"))))
+                                "creator@test.com", "password123", UserRole.CREATOR, "Jamie Creator", null, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.user.email").value("creator@test.com"));
@@ -58,7 +58,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegisterRequest(
-                                "not-an-email", "password123", UserRole.CREATOR, "Jamie Creator"))))
+                                "not-an-email", "password123", UserRole.CREATOR, "Jamie Creator", null, null, null))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"));
     }
