@@ -47,6 +47,20 @@ app:
     timeout-ms: ${APIFY_TIMEOUT_MS:120000}
   metrics-sync:
     min-interval-minutes: ${METRICS_SYNC_MIN_INTERVAL_MINUTES:15}
+  oauth:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+  password-reset:
+    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    frontend-reset-url-base: ${PASSWORD_RESET_FRONTEND_URL:http://localhost:5173/reset-password}
+  email:
+    provider: ${EMAIL_PROVIDER:logging}
+    from: ${EMAIL_FROM:Escobar Club <onboarding@resend.dev>}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+  email-verification:
+    token-ttl-hours: ${EMAIL_VERIFICATION_TOKEN_TTL_HOURS:48}
+    frontend-verify-url-base: ${EMAIL_VERIFICATION_FRONTEND_URL:http://localhost:5173/verify-email}
 
 springdoc:
   swagger-ui:

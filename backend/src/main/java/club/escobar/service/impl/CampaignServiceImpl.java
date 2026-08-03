@@ -28,13 +28,18 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
 public class CampaignServiceImpl implements CampaignService {
 
     private static final Logger log = LoggerFactory.getLogger(CampaignServiceImpl.class);
+    private static final Set<CampaignStatus> MANUALLY_SELECTABLE_STATUSES =
+            EnumSet.of(CampaignStatus.DRAFT, CampaignStatus.PUBLISHED, CampaignStatus.CANCELLED);
 
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
@@ -48,18 +53,22 @@ public class CampaignServiceImpl implements CampaignService {
         if (business.getRole() != UserRole.BUSINESS) {
             throw new ForbiddenActionException("Only businesses can create campaigns");
         }
-        if (request.endDate().isBefore(request.startDate())) {
-            throw new InvalidStateTransitionException("Campaign end date cannot be before its start date");
-        }
+        validateDateOrdering(request.submissionOpenAt(), request.submissionDeadline(),
+                request.publishStartAt(), request.publishEndAt());
 
+        // A newly created campaign is always PUBLISHED (i.e. governed by dates): its phase -
+        // Upcoming, Live, or Completed - is computed automatically from the dates the business just
+        // entered. DRAFT/CANCELLED can only be set afterward, via an explicit edit.
         Campaign campaign = campaignRepository.save(Campaign.builder()
                 .business(business)
                 .title(request.title())
                 .description(request.description())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
+                .submissionOpenAt(request.submissionOpenAt())
+                .submissionDeadline(request.submissionDeadline())
+                .publishStartAt(request.publishStartAt())
+                .publishEndAt(request.publishEndAt())
                 .ratePerThousandViewsInr(request.ratePerThousandViewsInr())
-                .status(initialStatusFor(request.startDate(), request.endDate()))
+                .status(CampaignStatus.PUBLISHED)
                 .urgent(request.urgent())
                 .build());
 
@@ -74,14 +83,19 @@ public class CampaignServiceImpl implements CampaignService {
         if (!campaign.getBusiness().getId().equals(businessUserId)) {
             throw new ForbiddenActionException("You may only edit your own campaigns");
         }
-        if (request.endDate().isBefore(request.startDate())) {
-            throw new InvalidStateTransitionException("Campaign end date cannot be before its start date");
+        validateDateOrdering(request.submissionOpenAt(), request.submissionDeadline(),
+                request.publishStartAt(), request.publishEndAt());
+        if (!MANUALLY_SELECTABLE_STATUSES.contains(request.status())) {
+            throw new InvalidStateTransitionException(
+                    "Status must be Draft, Published (automatic), or Cancelled - Upcoming/Live/Completed are computed from dates");
         }
 
         campaign.setTitle(request.title());
         campaign.setDescription(request.description());
-        campaign.setStartDate(request.startDate());
-        campaign.setEndDate(request.endDate());
+        campaign.setSubmissionOpenAt(request.submissionOpenAt());
+        campaign.setSubmissionDeadline(request.submissionDeadline());
+        campaign.setPublishStartAt(request.publishStartAt());
+        campaign.setPublishEndAt(request.publishEndAt());
         campaign.setRatePerThousandViewsInr(request.ratePerThousandViewsInr());
         campaign.setStatus(request.status());
         campaign.setUrgent(request.urgent());
@@ -97,24 +111,39 @@ public class CampaignServiceImpl implements CampaignService {
         String normalizedSearch = StringUtils.hasText(search) ? search.trim() : null;
         BigDecimal rateThreshold = computeActiveRateThreshold();
 
-        if ("HOT".equalsIgnoreCase(category)) {
-            List<Campaign> hotCampaigns = campaignRepository
-                    .searchPublicByStatus(normalizedSearch, CampaignStatus.ACTIVE, Pageable.unpaged())
+        Predicate<Campaign> categoryFilter = categoryFilterFor(category);
+        if (categoryFilter != null) {
+            List<Campaign> matches = campaignRepository
+                    .searchPublicByStatus(normalizedSearch, CampaignStatus.PUBLISHED, Pageable.unpaged())
                     .getContent()
                     .stream()
-                    .filter(c -> c.isHot(rateThreshold))
+                    .filter(categoryFilter)
                     .toList();
-            return PageResponse.of(paginate(hotCampaigns, pageable)
-                    .map(c -> withHot(campaignMapper.toResponse(c), true)));
+            boolean forceHot = "HOT".equalsIgnoreCase(category);
+            return PageResponse.of(paginate(matches, pageable)
+                    .map(c -> withHot(campaignMapper.toResponse(c), forceHot || c.isHot(rateThreshold))));
         }
 
-        Page<Campaign> page = "LIVE".equalsIgnoreCase(category)
-                ? campaignRepository.searchPublicByStatus(normalizedSearch, CampaignStatus.ACTIVE, pageable)
-                : "UPCOMING".equalsIgnoreCase(category)
-                        ? campaignRepository.searchPublicByStatus(normalizedSearch, CampaignStatus.STARTING_SOON, pageable)
-                        : campaignRepository.searchPublic(normalizedSearch, pageable);
-
+        Page<Campaign> page = campaignRepository.searchPublic(normalizedSearch, pageable);
         return PageResponse.of(page.map(c -> withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold))));
+    }
+
+    // Null for the default/no-category listing, which falls back to the plain searchPublic() page.
+    private Predicate<Campaign> categoryFilterFor(String category) {
+        if (category == null) {
+            return null;
+        }
+        return switch (category.toUpperCase()) {
+            case "HOT" -> c -> c.isHot(computeActiveRateThreshold());
+            // Matches the Discover page's Upcoming tab contract exactly: still ahead of publishing,
+            // and its submission deadline hasn't already lapsed (a campaign whose window closed before
+            // publishing starts falls into neither Upcoming nor Live and simply drops off Discover).
+            case "UPCOMING" -> c -> LocalDate.now().isBefore(c.getPublishStartAt())
+                    && !LocalDate.now().isAfter(c.getSubmissionDeadline());
+            case "LIVE" -> c -> c.getEffectiveStatus() == CampaignStatus.LIVE;
+            case "COMPLETED" -> c -> c.getEffectiveStatus() == CampaignStatus.COMPLETED;
+            default -> null;
+        };
     }
 
     @Override
@@ -128,13 +157,14 @@ public class CampaignServiceImpl implements CampaignService {
 
     private static CampaignResponse withHot(CampaignResponse response, boolean hot) {
         return new CampaignResponse(response.id(), response.businessId(), response.businessCompanyName(),
-                response.businessLogoUrl(), response.title(), response.description(), response.startDate(),
-                response.endDate(), response.ratePerThousandViewsInr(), response.status(),
+                response.businessLogoUrl(), response.title(), response.description(),
+                response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
+                response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
                 response.acceptingSubmissions(), response.urgent(), hot, response.createdAt(), response.updatedAt());
     }
 
-    // Top-quartile rate among currently-live (ACTIVE) campaigns, used as one of the "Hot" criteria.
-    // Null when there are fewer than 2 live campaigns to compare against.
+    // Top-quartile rate among campaigns currently open for creator submissions, used as one of the
+    // "Hot" criteria. Null when there are fewer than 2 such campaigns to compare against.
     private BigDecimal computeActiveRateThreshold() {
         List<BigDecimal> rates = campaignRepository.findActiveRates();
         if (rates.size() < 2) {
@@ -163,17 +193,16 @@ public class CampaignServiceImpl implements CampaignService {
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id " + campaignId));
     }
 
-    // A newly created campaign is never left in DRAFT: it opens as either "starting soon" (start date
-    // still ahead) or immediately ACTIVE (start date already within range), and CLOSED only if the whole
-    // window is already in the past.
-    private CampaignStatus initialStatusFor(LocalDate startDate, LocalDate endDate) {
-        LocalDate today = LocalDate.now();
-        if (today.isAfter(endDate)) {
-            return CampaignStatus.CLOSED;
+    private void validateDateOrdering(LocalDate submissionOpenAt, LocalDate submissionDeadline,
+                                       LocalDate publishStartAt, LocalDate publishEndAt) {
+        if (submissionDeadline.isBefore(submissionOpenAt)) {
+            throw new InvalidStateTransitionException("Submission deadline cannot be before submissions open");
         }
-        if (today.isBefore(startDate)) {
-            return CampaignStatus.STARTING_SOON;
+        if (publishStartAt.isBefore(submissionDeadline)) {
+            throw new InvalidStateTransitionException("Publishing cannot start before the submission deadline");
         }
-        return CampaignStatus.ACTIVE;
+        if (publishEndAt.isBefore(publishStartAt)) {
+            throw new InvalidStateTransitionException("Publishing end date cannot be before its start date");
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Campaign } from "@/types";
 import { Avatar } from "@/components/Avatar";
+import { StatusPill } from "@/components/StatusPill";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -31,26 +32,14 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
               🔥 Hot
             </span>
           )}
-          {campaign.acceptingSubmissions ? (
-            <span className="rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
-              Live
-            </span>
-          ) : campaign.status === "STARTING_SOON" ? (
-            <span className="rounded-full bg-gold-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-gold-deep">
-              Upcoming
-            </span>
-          ) : (
-            <span className="rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
-              Closed
-            </span>
-          )}
+          <StatusPill status={campaign.status} />
         </div>
       </div>
 
       {campaign.description && <p className="line-clamp-3 text-sm text-ink-500">{campaign.description}</p>}
 
       <div className="mt-auto flex items-center justify-between border-t border-ink-100 pt-3 font-mono text-xs text-ink-400">
-        <span>{formatDateRange(campaign.startDate, campaign.endDate)}</span>
+        <span>{formatDateRange(campaign.publishStartAt, campaign.publishEndAt)}</span>
         <span className="font-semibold text-gold-deep">
           {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
         </span>

@@ -18,7 +18,7 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
     @Query("""
             select c from Campaign c
             where c.status <> club.escobar.entity.enums.CampaignStatus.DRAFT
-            and c.status <> club.escobar.entity.enums.CampaignStatus.CLOSED
+            and c.status <> club.escobar.entity.enums.CampaignStatus.CANCELLED
             and (:search is null or lower(c.title) like lower(concat('%', :search, '%')))
             """)
     Page<Campaign> searchPublic(@Param("search") String search, Pageable pageable);
@@ -30,6 +30,12 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
             """)
     Page<Campaign> searchPublicByStatus(@Param("search") String search, @Param("status") CampaignStatus status, Pageable pageable);
 
-    @Query("select c.ratePerThousandViewsInr from Campaign c where c.status = club.escobar.entity.enums.CampaignStatus.ACTIVE")
+    // Rates of campaigns currently open for creator submissions, used to compute the "Hot" rate threshold.
+    @Query("""
+            select c.ratePerThousandViewsInr from Campaign c
+            where c.status = club.escobar.entity.enums.CampaignStatus.PUBLISHED
+            and c.submissionOpenAt <= CURRENT_DATE and c.submissionDeadline >= CURRENT_DATE
+            and CURRENT_DATE < c.publishStartAt
+            """)
     List<BigDecimal> findActiveRates();
 }

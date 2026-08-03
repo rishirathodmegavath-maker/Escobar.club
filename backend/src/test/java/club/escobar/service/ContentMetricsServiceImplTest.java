@@ -73,8 +73,9 @@ class ContentMetricsServiceImplTest {
         business = User.builder().id(2L).email("business@test.com").role(UserRole.BUSINESS).build();
         campaign = Campaign.builder()
                 .id(3L).business(business).title("Summer Launch")
-                .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(30))
-                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.ACTIVE)
+                .submissionOpenAt(LocalDate.now().minusDays(10)).submissionDeadline(LocalDate.now().minusDays(2))
+                .publishStartAt(LocalDate.now().minusDays(1)).publishEndAt(LocalDate.now().plusDays(30))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.PUBLISHED)
                 .build();
         publishedContent = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("post.png").mediaType(MediaType.IMAGE).status(ContentStatus.PUBLISHED)

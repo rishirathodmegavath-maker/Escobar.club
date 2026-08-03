@@ -12,20 +12,23 @@ import type { CampaignCategory } from "@/types";
 
 const CATEGORY_TABS: { label: string; value: CampaignCategory }[] = [
   { label: "🔥 Hot", value: "HOT" },
-  { label: "🟢 Live", value: "LIVE" },
   { label: "⏳ Upcoming", value: "UPCOMING" },
+  { label: "🟢 Live", value: "LIVE" },
+  { label: "✅ Completed", value: "COMPLETED" },
 ];
 
 const CATEGORY_DESCRIPTIONS: Record<CampaignCategory, string> = {
   HOT: "High-priority campaigns that need creators immediately.",
-  LIVE: "Campaigns currently open — submit your content directly, no approval needed to get started.",
-  UPCOMING: "Scheduled to go live soon. You can view these now, but submissions open once they're Live.",
+  UPCOMING: "Accepting creator submissions now, ahead of their publishing window.",
+  LIVE: "Currently publishing — submissions are closed, views are being counted.",
+  COMPLETED: "Publishing has ended for these campaigns.",
 };
 
 const CATEGORY_EMPTY_TEXT: Record<CampaignCategory, string> = {
-  HOT: "No high-priority campaigns right now — check the Live tab for everything currently open.",
-  LIVE: "No campaigns are open for submissions right now. Check back soon.",
-  UPCOMING: "No campaigns are scheduled to go live soon.",
+  HOT: "No high-priority campaigns right now — check the Upcoming tab for everything open for submissions.",
+  UPCOMING: "No campaigns are open for submissions right now. Check back soon.",
+  LIVE: "No campaigns are currently live.",
+  COMPLETED: "No campaigns have completed their publishing window yet.",
 };
 
 export function DiscoverCampaignsPage() {

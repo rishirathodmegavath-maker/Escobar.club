@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Field";
@@ -15,26 +17,59 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+const UNVERIFIED_MESSAGE = "Please verify your email before signing in";
+
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle, resendVerification } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showResend, setShowResend] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  const goToDestination = (user: { role: string }) => {
+    const from = (location.state as { from?: Location })?.from?.pathname;
+    navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
+  };
+
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
+    setShowResend(false);
+    setResendState("idle");
     try {
       const user = await login(values);
-      const from = (location.state as { from?: Location })?.from?.pathname;
-      navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
+      goToDestination(user);
     } catch (err) {
-      setServerError(extractErrorMessage(err, "Invalid email or password"));
+      const message = extractErrorMessage(err, "Invalid email or password");
+      setServerError(message);
+      setShowResend(axios.isAxiosError(err) && err.response?.status === 403 && message === UNVERIFIED_MESSAGE);
+    }
+  };
+
+  const onResendVerification = async () => {
+    setResendState("sending");
+    try {
+      await resendVerification({ email: getValues("email") });
+    } finally {
+      setResendState("sent");
+    }
+  };
+
+  const onGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    if (!credentialResponse.credential) return;
+    setServerError(null);
+    try {
+      const user = await loginWithGoogle({ idToken: credentialResponse.credential });
+      goToDestination(user);
+    } catch (err) {
+      setServerError(extractErrorMessage(err, "Could not sign in with Google"));
     }
   };
 
@@ -64,14 +99,45 @@ export function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="card-surface flex flex-col gap-4 p-7">
           {serverError && (
             <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
-              {serverError}
+              <p>{serverError}</p>
+              {showResend && (
+                <p className="mt-1">
+                  {resendState === "sent" ? (
+                    "If that account needs verifying, we've sent a new link."
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onResendVerification}
+                      disabled={resendState === "sending"}
+                      className="font-medium underline disabled:opacity-50"
+                    >
+                      Resend verification email
+                    </button>
+                  )}
+                </p>
+              )}
             </div>
           )}
           <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
-          <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
+          <div className="flex flex-col gap-1.5">
+            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
+            <Link to="/forgot-password" className="self-end text-xs font-medium text-signal-600 hover:text-signal-700">
+              Forgot password?
+            </Link>
+          </div>
           <Button type="submit" isLoading={isSubmitting} className="mt-2 w-full">
             Sign in
           </Button>
+
+          <div className="flex items-center gap-3 text-xs text-ink-300">
+            <span className="h-px flex-1 bg-ink-100" />
+            OR
+            <span className="h-px flex-1 bg-ink-100" />
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin onSuccess={onGoogleSuccess} onError={() => setServerError("Could not sign in with Google")} />
+          </div>
         </form>
 
         <p className="mt-6 text-center text-sm text-ink-400">

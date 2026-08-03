@@ -3,6 +3,7 @@ package club.escobar.controller;
 import club.escobar.dto.auth.AuthResponse;
 import club.escobar.dto.auth.LoginRequest;
 import club.escobar.dto.auth.RegisterRequest;
+import club.escobar.dto.auth.RegisterResponse;
 import club.escobar.dto.auth.UserSummaryResponse;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.security.JwtAuthenticationFilter;
@@ -39,9 +40,8 @@ class AuthControllerTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
-    void register_returns201WithTokens() throws Exception {
-        var response = new AuthResponse("access-token", "refresh-token",
-                new UserSummaryResponse(1L, "creator@test.com", UserRole.CREATOR));
+    void register_returns201WithMessage() throws Exception {
+        var response = new RegisterResponse("Registration successful. Please check your email to verify your account.");
         when(authService.register(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/auth/register")
@@ -49,8 +49,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(new RegisterRequest(
                                 "creator@test.com", "password123", UserRole.CREATOR, "Jamie Creator", null, null, null))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").value("access-token"))
-                .andExpect(jsonPath("$.user.email").value("creator@test.com"));
+                .andExpect(jsonPath("$.message").value("Registration successful. Please check your email to verify your account."));
     }
 
     @Test
@@ -66,7 +65,7 @@ class AuthControllerTest {
     @Test
     void login_returns200WithTokens() throws Exception {
         var response = new AuthResponse("access-token", "refresh-token",
-                new UserSummaryResponse(2L, "biz@test.com", UserRole.BUSINESS));
+                new UserSummaryResponse(2L, "biz@test.com", UserRole.BUSINESS, true));
         when(authService.login(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/auth/login")

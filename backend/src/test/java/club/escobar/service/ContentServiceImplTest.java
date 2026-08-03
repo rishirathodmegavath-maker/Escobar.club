@@ -60,8 +60,9 @@ class ContentServiceImplTest {
         business = User.builder().id(2L).email("business@test.com").role(UserRole.BUSINESS).build();
         campaign = Campaign.builder()
                 .id(3L).business(business).title("Summer Launch")
-                .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(30))
-                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.ACTIVE)
+                .submissionOpenAt(LocalDate.now().minusDays(1)).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(30))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.PUBLISHED)
                 .build();
     }
 

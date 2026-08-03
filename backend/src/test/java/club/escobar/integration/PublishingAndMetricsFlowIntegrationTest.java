@@ -1,10 +1,11 @@
 package club.escobar.integration;
 
 import club.escobar.dto.auth.AuthResponse;
+import club.escobar.dto.auth.LoginRequest;
 import club.escobar.dto.auth.RegisterRequest;
+import club.escobar.dto.auth.RegisterResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
-import club.escobar.dto.campaign.CampaignUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentPublishRequest;
@@ -12,13 +13,15 @@ import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.metrics.ContentMetricsSnapshotResponse;
 import club.escobar.dto.metrics.LeaderboardEntryResponse;
-import club.escobar.entity.enums.CampaignStatus;
+import club.escobar.entity.User;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.integration.apify.ApifyInstagramClient;
 import club.escobar.integration.apify.ApifyPostMetrics;
+import club.escobar.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -42,6 +45,9 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
     @MockBean
     private ApifyInstagramClient apifyInstagramClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private final TestRestTemplate rest = new TestRestTemplate();
 
     private String baseUrl() {
@@ -49,12 +55,21 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     private AuthResponse registerAndLogin(String email, UserRole role, String displayName) {
-        var response = rest.postForEntity(baseUrl() + "/api/auth/register",
+        var registerResponse = rest.postForEntity(baseUrl() + "/api/auth/register",
                 new RegisterRequest(email, "password123", role, displayName,
                         "22AAAAA0000A1Z5", "Contact Person", "9876543210"),
+                RegisterResponse.class);
+        assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        User user = userRepository.findByEmailIgnoreCase(email).orElseThrow();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        var loginResponse = rest.postForEntity(baseUrl() + "/api/auth/login",
+                new LoginRequest(email, "password123"),
                 AuthResponse.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        return response.getBody();
+        assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return loginResponse.getBody();
     }
 
     private HttpHeaders authHeaders(String accessToken) {
@@ -63,20 +78,17 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
         return headers;
     }
 
-    private Long createActiveCampaign(AuthResponse businessAuth, String title) {
+    // Submissions opened yesterday and stay open for 10 more days; publishing hasn't started yet - so
+    // the campaign is Upcoming and currently accepting creator submissions.
+    private Long createCampaignOpenForSubmissions(AuthResponse businessAuth, String title) {
         var createResponse = rest.exchange(baseUrl() + "/api/campaigns", HttpMethod.POST,
                 new HttpEntity<>(new CampaignCreateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), false),
+                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(10),
+                        LocalDate.now().plusDays(11), LocalDate.now().plusDays(40),
+                        new BigDecimal("100.00"), false),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
-        Long campaignId = createResponse.getBody().id();
-
-        rest.exchange(baseUrl() + "/api/campaigns/" + campaignId, HttpMethod.PUT,
-                new HttpEntity<>(new CampaignUpdateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), CampaignStatus.ACTIVE, false),
-                        authHeaders(businessAuth.accessToken())),
-                CampaignResponse.class);
-        return campaignId;
+        return createResponse.getBody().id();
     }
 
     @Test
@@ -84,7 +96,7 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
         AuthResponse creatorAuth = registerAndLogin("creator3@test.com", UserRole.CREATOR, "Jordan Creator");
         AuthResponse businessAuth = registerAndLogin("business3@test.com", UserRole.BUSINESS, "Gamma Co");
         Long businessId = businessAuth.user().id();
-        Long campaignId = createActiveCampaign(businessAuth, "Gamma Launch");
+        Long campaignId = createCampaignOpenForSubmissions(businessAuth, "Gamma Launch");
 
         var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
                 new HttpEntity<>(new ContentCreateRequest(campaignId, "caption", "http://media/1.png", MediaType.IMAGE),

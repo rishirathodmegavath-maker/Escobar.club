@@ -11,8 +11,10 @@ import java.time.LocalDate;
 public record CampaignCreateRequest(
         @NotBlank @Size(max = 150) String title,
         @Size(max = 4000) String description,
-        @NotNull LocalDate startDate,
-        @NotNull LocalDate endDate,
+        @NotNull LocalDate submissionOpenAt,
+        @NotNull LocalDate submissionDeadline,
+        @NotNull LocalDate publishStartAt,
+        @NotNull LocalDate publishEndAt,
         @NotNull @DecimalMin("0.01") BigDecimal ratePerThousandViewsInr,
         boolean urgent
 ) {

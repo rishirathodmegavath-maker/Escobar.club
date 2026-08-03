@@ -1,5 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { authApi, type LoginPayload, type RegisterPayload } from "@/api/auth";
+import {
+  authApi,
+  type ForgotPasswordPayload,
+  type GoogleAuthPayload,
+  type LoginPayload,
+  type RegisterPayload,
+  type RegisterResult,
+  type ResendVerificationPayload,
+  type ResetPasswordPayload,
+  type VerifyEmailPayload,
+} from "@/api/auth";
+import { accountApi, type SetPasswordPayload } from "@/api/account";
 import { onUnauthorized, tokenStorage } from "@/api/client";
 import type { UserSummary } from "@/types";
 
@@ -10,7 +21,13 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isReady: boolean;
   login: (payload: LoginPayload) => Promise<UserSummary>;
-  register: (payload: RegisterPayload) => Promise<UserSummary>;
+  register: (payload: RegisterPayload) => Promise<RegisterResult>;
+  loginWithGoogle: (payload: GoogleAuthPayload) => Promise<UserSummary>;
+  forgotPassword: (payload: ForgotPasswordPayload) => Promise<void>;
+  resetPassword: (payload: ResetPasswordPayload) => Promise<void>;
+  setPassword: (payload: SetPasswordPayload) => Promise<UserSummary>;
+  verifyEmail: (payload: VerifyEmailPayload) => Promise<UserSummary>;
+  resendVerification: (payload: ResendVerificationPayload) => Promise<void>;
   logout: () => void;
 }
 
@@ -50,13 +67,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persist],
   );
 
-  const register = useCallback(
-    async (payload: RegisterPayload) => {
-      const response = await authApi.register(payload);
+  const register = useCallback(async (payload: RegisterPayload) => authApi.register(payload), []);
+
+  const loginWithGoogle = useCallback(
+    async (payload: GoogleAuthPayload) => {
+      const response = await authApi.googleAuth(payload);
       persist(response.user, response.accessToken, response.refreshToken);
       return response.user;
     },
     [persist],
+  );
+
+  const forgotPassword = useCallback((payload: ForgotPasswordPayload) => authApi.forgotPassword(payload), []);
+
+  const resetPassword = useCallback((payload: ResetPasswordPayload) => authApi.resetPassword(payload), []);
+
+  const setPassword = useCallback(async (payload: SetPasswordPayload) => {
+    const nextUser = await accountApi.setPassword(payload);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
+  const verifyEmail = useCallback(
+    async (payload: VerifyEmailPayload) => {
+      const response = await authApi.verifyEmail(payload);
+      persist(response.user, response.accessToken, response.refreshToken);
+      return response.user;
+    },
+    [persist],
+  );
+
+  const resendVerification = useCallback(
+    (payload: ResendVerificationPayload) => authApi.resendVerification(payload),
+    [],
   );
 
   const logout = useCallback(() => {
@@ -70,8 +114,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, isReady, login, register, logout }),
-    [user, isReady, login, register, logout],
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isReady,
+      login,
+      register,
+      loginWithGoogle,
+      forgotPassword,
+      resetPassword,
+      setPassword,
+      verifyEmail,
+      resendVerification,
+      logout,
+    }),
+    [
+      user,
+      isReady,
+      login,
+      register,
+      loginWithGoogle,
+      forgotPassword,
+      resetPassword,
+      setPassword,
+      verifyEmail,
+      resendVerification,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

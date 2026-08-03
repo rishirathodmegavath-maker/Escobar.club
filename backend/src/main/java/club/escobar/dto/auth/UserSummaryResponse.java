@@ -5,6 +5,7 @@ import club.escobar.entity.enums.UserRole;
 public record UserSummaryResponse(
         Long id,
         String email,
-        UserRole role
+        UserRole role,
+        boolean hasPassword
 ) {
 }

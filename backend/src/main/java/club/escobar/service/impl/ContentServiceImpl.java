@@ -53,8 +53,7 @@ public class ContentServiceImpl implements ContentService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!campaign.isOpenForSubmissions()) {
-            throw new InvalidStateTransitionException(
-                    "This campaign is not currently accepting content submissions (status: " + campaign.getStatus() + ")");
+            throw new InvalidStateTransitionException(campaign.submissionClosedReason());
         }
 
         Content content = Content.builder()

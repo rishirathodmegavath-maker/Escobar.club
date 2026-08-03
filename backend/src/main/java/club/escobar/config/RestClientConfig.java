@@ -22,4 +22,11 @@ public class RestClientConfig {
                 .requestFactory(ClientHttpRequestFactories.get(settings))
                 .build();
     }
+
+    @Bean
+    public RestClient resendRestClient() {
+        return RestClient.builder()
+                .baseUrl("https://api.resend.com")
+                .build();
+    }
 }

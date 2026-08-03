@@ -13,21 +13,31 @@ import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { CompassIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
-import type { Campaign, CampaignStatus } from "@/types";
+import type { Campaign, ManualCampaignStatus } from "@/types";
 
 const schema = z
   .object({
     title: z.string().min(2, "Give your campaign a name").max(150),
     description: z.string().max(4000).optional().or(z.literal("")),
-    startDate: z.string().min(1, "Start date is required"),
-    endDate: z.string().min(1, "End date is required"),
+    submissionOpenAt: z.string().min(1, "Submission open date is required"),
+    submissionDeadline: z.string().min(1, "Submission deadline is required"),
+    publishStartAt: z.string().min(1, "Publish start date is required"),
+    publishEndAt: z.string().min(1, "Publish end date is required"),
     ratePerThousandViewsInr: z.coerce.number().positive("Rate must be greater than zero"),
-    status: z.enum(["DRAFT", "STARTING_SOON", "ACTIVE", "CLOSED"]).optional(),
+    status: z.enum(["DRAFT", "PUBLISHED", "CANCELLED"]).optional(),
     urgent: z.boolean().optional(),
   })
-  .refine((data) => data.endDate >= data.startDate, {
-    message: "End date must be on or after the start date",
-    path: ["endDate"],
+  .refine((data) => data.submissionDeadline >= data.submissionOpenAt, {
+    message: "Submission deadline must be on or after submissions open",
+    path: ["submissionDeadline"],
+  })
+  .refine((data) => data.publishStartAt >= data.submissionDeadline, {
+    message: "Publishing can't start before the submission deadline",
+    path: ["publishStartAt"],
+  })
+  .refine((data) => data.publishEndAt >= data.publishStartAt, {
+    message: "Publish end date must be on or after the publish start date",
+    path: ["publishEndAt"],
   });
 type FormValues = z.infer<typeof schema>;
 
@@ -57,8 +67,22 @@ function CampaignForm({
       <Input label="Campaign title" error={errors.title?.message} {...register("title")} />
       <TextArea label="Description" rows={4} error={errors.description?.message} {...register("description")} />
       <div className="grid grid-cols-2 gap-4">
-        <Input type="date" label="Start date" error={errors.startDate?.message} {...register("startDate")} />
-        <Input type="date" label="End date" error={errors.endDate?.message} {...register("endDate")} />
+        <Input
+          type="date"
+          label="Submission opens"
+          error={errors.submissionOpenAt?.message}
+          {...register("submissionOpenAt")}
+        />
+        <Input
+          type="date"
+          label="Submission deadline"
+          error={errors.submissionDeadline?.message}
+          {...register("submissionDeadline")}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input type="date" label="Publishing start date" error={errors.publishStartAt?.message} {...register("publishStartAt")} />
+        <Input type="date" label="Publishing end date" error={errors.publishEndAt?.message} {...register("publishEndAt")} />
       </div>
       <Input
         type="number"
@@ -78,10 +102,9 @@ function CampaignForm({
             className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900"
             {...register("status")}
           >
-            <option value="DRAFT">Draft (not visible to creators)</option>
-            <option value="STARTING_SOON">Starting soon (visible, not yet accepting submissions)</option>
-            <option value="ACTIVE">Active (visible, accepting content submissions)</option>
-            <option value="CLOSED">Closed</option>
+            <option value="PUBLISHED">Auto (Upcoming / Live / Completed, computed from dates)</option>
+            <option value="DRAFT">Draft (hidden from creators)</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </label>
       )}
@@ -102,10 +125,12 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
       campaignsApi.update(campaign.id, {
         title: values.title,
         description: values.description ?? "",
-        startDate: values.startDate,
-        endDate: values.endDate,
+        submissionOpenAt: values.submissionOpenAt,
+        submissionDeadline: values.submissionDeadline,
+        publishStartAt: values.publishStartAt,
+        publishEndAt: values.publishEndAt,
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
-        status: (values.status ?? campaign.status) as CampaignStatus,
+        status: (values.status ?? "PUBLISHED") as ManualCampaignStatus,
         urgent: values.urgent ?? false,
       }),
     onSuccess: () => {
@@ -122,7 +147,8 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
         <div>
           <h3 className="font-display text-lg font-semibold text-ink-900">{campaign.title}</h3>
           <p className="font-mono text-xs text-ink-400">
-            {campaign.startDate} – {campaign.endDate} · {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
+            Submissions {campaign.submissionOpenAt} – {campaign.submissionDeadline} · Live {campaign.publishStartAt} –{" "}
+            {campaign.publishEndAt} · {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -144,10 +170,12 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
             defaultValues={{
               title: campaign.title,
               description: campaign.description ?? "",
-              startDate: campaign.startDate,
-              endDate: campaign.endDate,
+              submissionOpenAt: campaign.submissionOpenAt,
+              submissionDeadline: campaign.submissionDeadline,
+              publishStartAt: campaign.publishStartAt,
+              publishEndAt: campaign.publishEndAt,
               ratePerThousandViewsInr: campaign.ratePerThousandViewsInr,
-              status: campaign.status,
+              status: campaign.status === "DRAFT" || campaign.status === "CANCELLED" ? campaign.status : "PUBLISHED",
               urgent: campaign.urgent,
             }}
             onSubmit={(values) => updateMutation.mutate(values)}
@@ -181,8 +209,10 @@ export function BusinessCampaignsPage() {
       campaignsApi.create({
         title: values.title,
         description: values.description ?? "",
-        startDate: values.startDate,
-        endDate: values.endDate,
+        submissionOpenAt: values.submissionOpenAt,
+        submissionDeadline: values.submissionDeadline,
+        publishStartAt: values.publishStartAt,
+        publishEndAt: values.publishEndAt,
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
         urgent: values.urgent ?? false,
       }),

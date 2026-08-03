@@ -4,7 +4,11 @@ export type ContentStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "APPRO
 
 export type MediaType = "IMAGE" | "VIDEO";
 
-export type CampaignStatus = "DRAFT" | "STARTING_SOON" | "ACTIVE" | "CLOSED";
+export type CampaignStatus = "DRAFT" | "PUBLISHED" | "UPCOMING" | "LIVE" | "COMPLETED" | "CANCELLED";
+
+// Subset of CampaignStatus a business may pick manually when editing a campaign. UPCOMING/LIVE/COMPLETED
+// are always computed from dates and are never valid here.
+export type ManualCampaignStatus = "DRAFT" | "PUBLISHED" | "CANCELLED";
 
 export type KycStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
@@ -14,6 +18,7 @@ export interface UserSummary {
   id: number;
   email: string;
   role: UserRole;
+  hasPassword: boolean;
 }
 
 export interface AuthResponse {
@@ -58,8 +63,10 @@ export interface Campaign {
   businessLogoUrl: string | null;
   title: string;
   description: string | null;
-  startDate: string;
-  endDate: string;
+  submissionOpenAt: string;
+  submissionDeadline: string;
+  publishStartAt: string;
+  publishEndAt: string;
   ratePerThousandViewsInr: number;
   status: CampaignStatus;
   acceptingSubmissions: boolean;
@@ -69,7 +76,7 @@ export interface Campaign {
   updatedAt: string;
 }
 
-export type CampaignCategory = "HOT" | "LIVE" | "UPCOMING";
+export type CampaignCategory = "HOT" | "LIVE" | "UPCOMING" | "COMPLETED";
 
 export interface ContentReviewNote {
   id: number;

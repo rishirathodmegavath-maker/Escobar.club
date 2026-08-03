@@ -1,19 +1,22 @@
 package club.escobar.integration;
 
 import club.escobar.dto.auth.AuthResponse;
+import club.escobar.dto.auth.LoginRequest;
 import club.escobar.dto.auth.RegisterRequest;
+import club.escobar.dto.auth.RegisterResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
-import club.escobar.dto.campaign.CampaignUpdateRequest;
 import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.content.ContentUpdateRequest;
-import club.escobar.entity.enums.CampaignStatus;
+import club.escobar.entity.User;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
 import club.escobar.entity.enums.UserRole;
+import club.escobar.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
@@ -31,6 +34,9 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
     @LocalServerPort
     private int port;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private final TestRestTemplate rest = new TestRestTemplate();
 
     private String baseUrl() {
@@ -38,12 +44,21 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     private AuthResponse registerAndLogin(String email, UserRole role, String displayName) {
-        var response = rest.postForEntity(baseUrl() + "/api/auth/register",
+        var registerResponse = rest.postForEntity(baseUrl() + "/api/auth/register",
                 new RegisterRequest(email, "password123", role, displayName,
                         "22AAAAA0000A1Z5", "Contact Person", "9876543210"),
+                RegisterResponse.class);
+        assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        User user = userRepository.findByEmailIgnoreCase(email).orElseThrow();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        var loginResponse = rest.postForEntity(baseUrl() + "/api/auth/login",
+                new LoginRequest(email, "password123"),
                 AuthResponse.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        return response.getBody();
+        assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return loginResponse.getBody();
     }
 
     private HttpHeaders authHeaders(String accessToken) {
@@ -52,29 +67,25 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
         return headers;
     }
 
-    private Long createActiveCampaign(AuthResponse businessAuth, String title) {
+    // Submissions opened yesterday and stay open for 10 more days; publishing hasn't started yet - so
+    // the campaign is Upcoming and currently accepting creator submissions.
+    private Long createCampaignOpenForSubmissions(AuthResponse businessAuth, String title) {
         var createResponse = rest.exchange(baseUrl() + "/api/campaigns", HttpMethod.POST,
                 new HttpEntity<>(new CampaignCreateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), false),
+                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(10),
+                        LocalDate.now().plusDays(11), LocalDate.now().plusDays(40),
+                        new BigDecimal("100.00"), false),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        Long campaignId = createResponse.getBody().id();
-
-        var activateResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId, HttpMethod.PUT,
-                new HttpEntity<>(new CampaignUpdateRequest(title, "Campaign description",
-                        LocalDate.now().minusDays(1), LocalDate.now().plusDays(30), new BigDecimal("100.00"), CampaignStatus.ACTIVE, false),
-                        authHeaders(businessAuth.accessToken())),
-                CampaignResponse.class);
-        assertThat(activateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return campaignId;
+        return createResponse.getBody().id();
     }
 
     @Test
     void fullLifecycle_fromDirectSubmissionToApprovedContent_withChangeRequestRoundTrip() {
         AuthResponse creatorAuth = registerAndLogin("creator1@test.com", UserRole.CREATOR, "Jamie Creator");
         AuthResponse businessAuth = registerAndLogin("business1@test.com", UserRole.BUSINESS, "Acme Co");
-        Long campaignId = createActiveCampaign(businessAuth, "Acme Summer Launch");
+        Long campaignId = createCampaignOpenForSubmissions(businessAuth, "Acme Summer Launch");
 
         // 1. Creator submits content directly, with no application/approval step
         var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
@@ -120,7 +131,7 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
     void creatorCanSubmitMultiplePiecesOfContent_toTheSameCampaign() {
         AuthResponse creatorAuth = registerAndLogin("creator2@test.com", UserRole.CREATOR, "Alex Creator");
         AuthResponse businessAuth = registerAndLogin("business2@test.com", UserRole.BUSINESS, "Beta Co");
-        Long campaignId = createActiveCampaign(businessAuth, "Beta Launch");
+        Long campaignId = createCampaignOpenForSubmissions(businessAuth, "Beta Launch");
 
         var first = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
                 new HttpEntity<>(new ContentCreateRequest(campaignId, "first piece", "http://media/1.png", MediaType.IMAGE),
@@ -143,11 +154,13 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
 
         var createResponse = rest.exchange(baseUrl() + "/api/campaigns", HttpMethod.POST,
                 new HttpEntity<>(new CampaignCreateRequest("Gamma Launch", "Campaign description",
-                        LocalDate.now().plusDays(10), LocalDate.now().plusDays(30), new BigDecimal("100.00"), false),
+                        LocalDate.now().plusDays(20), LocalDate.now().plusDays(25),
+                        LocalDate.now().plusDays(26), LocalDate.now().plusDays(40),
+                        new BigDecimal("100.00"), false),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         Long campaignId = createResponse.getBody().id();
-        // Left as DRAFT (not activated), so it should not accept submissions.
+        // Submissions don't open for another 20 days, so it should not accept submissions yet.
 
         var submitResponse = rest.exchange(baseUrl() + "/api/campaigns/" + campaignId + "/content", HttpMethod.POST,
                 new HttpEntity<>(new ContentCreateRequest(campaignId, "caption", "http://media/1.png", MediaType.IMAGE),

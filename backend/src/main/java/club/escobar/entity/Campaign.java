@@ -16,7 +16,8 @@ import java.time.ZoneOffset;
 @Table(name = "campaigns", indexes = {
         @Index(name = "idx_campaigns_business", columnList = "business_id"),
         @Index(name = "idx_campaigns_status", columnList = "status"),
-        @Index(name = "idx_campaigns_dates", columnList = "start_date, end_date")
+        @Index(name = "idx_campaigns_dates", columnList = "publish_start_at, publish_end_at"),
+        @Index(name = "idx_campaigns_submission_dates", columnList = "submission_open_at, submission_deadline")
 })
 @Getter
 @Setter
@@ -39,15 +40,26 @@ public class Campaign {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "start_date", nullable = false)
-    private LocalDate startDate;
+    // Creator submission window: uploads are only accepted while today is within [submissionOpenAt, submissionDeadline].
+    @Column(name = "submission_open_at", nullable = false)
+    private LocalDate submissionOpenAt;
 
-    @Column(name = "end_date", nullable = false)
-    private LocalDate endDate;
+    @Column(name = "submission_deadline", nullable = false)
+    private LocalDate submissionDeadline;
+
+    // Publishing window: the phase where already-approved content goes live and views/analytics count.
+    @Column(name = "publish_start_at", nullable = false)
+    private LocalDate publishStartAt;
+
+    @Column(name = "publish_end_at", nullable = false)
+    private LocalDate publishEndAt;
 
     @Column(name = "rate_per_thousand_views_inr", nullable = false, precision = 12, scale = 2)
     private BigDecimal ratePerThousandViewsInr;
 
+    // Only DRAFT/CANCELLED/PUBLISHED are ever persisted here. PUBLISHED means "governed by dates" -
+    // getEffectiveStatus() resolves it to UPCOMING/LIVE/COMPLETED at read time so the lifecycle can
+    // never go stale the way a manually-picked status could.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
@@ -65,14 +77,48 @@ public class Campaign {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public boolean isOpenForSubmissions() {
+    // The status actually shown to clients: DRAFT/CANCELLED pass through as manual overrides,
+    // anything else is derived fresh from today vs. the publish window every time it's called.
+    public CampaignStatus getEffectiveStatus() {
+        if (status == CampaignStatus.DRAFT || status == CampaignStatus.CANCELLED) {
+            return status;
+        }
         LocalDate today = LocalDate.now();
-        return status == CampaignStatus.ACTIVE && !today.isBefore(startDate) && !today.isAfter(endDate);
+        if (today.isBefore(publishStartAt)) {
+            return CampaignStatus.UPCOMING;
+        }
+        if (!today.isAfter(publishEndAt)) {
+            return CampaignStatus.LIVE;
+        }
+        return CampaignStatus.COMPLETED;
+    }
+
+    // Creators may only submit content during the Upcoming phase, and only within the submission window.
+    public boolean isOpenForSubmissions() {
+        if (getEffectiveStatus() != CampaignStatus.UPCOMING) {
+            return false;
+        }
+        LocalDate today = LocalDate.now();
+        return !today.isBefore(submissionOpenAt) && !today.isAfter(submissionDeadline);
+    }
+
+    public String submissionClosedReason() {
+        CampaignStatus effective = getEffectiveStatus();
+        if (effective == CampaignStatus.DRAFT) {
+            return "This campaign has not been published yet.";
+        }
+        if (effective == CampaignStatus.CANCELLED) {
+            return "This campaign has been cancelled.";
+        }
+        if (LocalDate.now().isBefore(submissionOpenAt)) {
+            return "Submissions have not opened yet.";
+        }
+        return "Submission period has ended.";
     }
 
     // A live campaign is "Hot" when the brand marked it urgent, its submission window closes within 72
-    // hours, or its rate is in the top tier of currently-live campaigns (activeRateThreshold, computed by
-    // the caller across all ACTIVE campaigns). Only ever true for campaigns already open for submissions.
+    // hours, or its rate is in the top tier of currently-open-for-submission campaigns (activeRateThreshold,
+    // computed by the caller). Only ever true for campaigns already open for submissions.
     public boolean isHot(BigDecimal activeRateThreshold) {
         if (!isOpenForSubmissions()) {
             return false;
@@ -80,7 +126,7 @@ public class Campaign {
         if (urgent) {
             return true;
         }
-        Instant deadline = endDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant deadline = submissionDeadline.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         long hoursLeft = Duration.between(Instant.now(), deadline).toHours();
         if (hoursLeft <= 72) {
             return true;

@@ -51,110 +51,150 @@ class CampaignServiceImplTest {
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).active(true).build();
     }
 
+    private CampaignCreateRequest createRequest(LocalDate submissionOpenAt, LocalDate submissionDeadline,
+                                                  LocalDate publishStartAt, LocalDate publishEndAt) {
+        return new CampaignCreateRequest("Launch", "desc", submissionOpenAt, submissionDeadline,
+                publishStartAt, publishEndAt, new BigDecimal("100.00"), false);
+    }
+
     @Test
-    void create_startsAsActive_whenStartDateAlreadyWithinRange() {
+    void create_alwaysPersistsAsPublished_lettingDatesDriveThePhase() {
         when(userRepository.findById(2L)).thenReturn(Optional.of(business));
         when(campaignRepository.save(any(Campaign.class))).thenAnswer(inv -> inv.getArgument(0));
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
-        campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false));
+        campaignService.create(2L, createRequest(LocalDate.now(), LocalDate.now().plusDays(5),
+                LocalDate.now().plusDays(6), LocalDate.now().plusDays(20)));
 
         var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
         verify(campaignRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(CampaignStatus.ACTIVE);
+        assertThat(captor.getValue().getStatus()).isEqualTo(CampaignStatus.PUBLISHED);
         assertThat(captor.getValue().getBusiness()).isEqualTo(business);
-    }
-
-    @Test
-    void create_startsAsStartingSoon_whenStartDateInFuture() {
-        when(userRepository.findById(2L)).thenReturn(Optional.of(business));
-        when(campaignRepository.save(any(Campaign.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
-
-        campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now().plusDays(5), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false));
-
-        var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
-        verify(campaignRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(CampaignStatus.STARTING_SOON);
-    }
-
-    @Test
-    void create_startsAsClosed_whenDateRangeAlreadyInPast() {
-        when(userRepository.findById(2L)).thenReturn(Optional.of(business));
-        when(campaignRepository.save(any(Campaign.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
-
-        campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new BigDecimal("100.00"), false));
-
-        var captor = org.mockito.ArgumentCaptor.forClass(Campaign.class);
-        verify(campaignRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(CampaignStatus.CLOSED);
     }
 
     @Test
     void create_rejectsWhenCallerIsNotBusiness() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
 
-        assertThatThrownBy(() -> campaignService.create(1L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), false)))
+        assertThatThrownBy(() -> campaignService.create(1L, createRequest(LocalDate.now(), LocalDate.now().plusDays(5),
+                LocalDate.now().plusDays(6), LocalDate.now().plusDays(20))))
                 .isInstanceOf(ForbiddenActionException.class);
     }
 
     @Test
-    void create_rejectsWhenEndDateBeforeStartDate() {
+    void create_rejectsWhenSubmissionDeadlineBeforeSubmissionOpen() {
         when(userRepository.findById(2L)).thenReturn(Optional.of(business));
 
-        assertThatThrownBy(() -> campaignService.create(2L, new CampaignCreateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().minusDays(1), new BigDecimal("100.00"), false)))
+        assertThatThrownBy(() -> campaignService.create(2L, createRequest(LocalDate.now(), LocalDate.now().minusDays(1),
+                LocalDate.now().plusDays(6), LocalDate.now().plusDays(20))))
+                .isInstanceOf(InvalidStateTransitionException.class);
+    }
+
+    @Test
+    void create_rejectsWhenPublishStartsBeforeSubmissionDeadline() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(business));
+
+        assertThatThrownBy(() -> campaignService.create(2L, createRequest(LocalDate.now(), LocalDate.now().plusDays(10),
+                LocalDate.now().plusDays(5), LocalDate.now().plusDays(20))))
+                .isInstanceOf(InvalidStateTransitionException.class);
+    }
+
+    @Test
+    void create_rejectsWhenPublishEndBeforePublishStart() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(business));
+
+        assertThatThrownBy(() -> campaignService.create(2L, createRequest(LocalDate.now(), LocalDate.now().plusDays(5),
+                LocalDate.now().plusDays(6), LocalDate.now().plusDays(1))))
                 .isInstanceOf(InvalidStateTransitionException.class);
     }
 
     @Test
     void update_rejectsWhenNotOwner() {
         Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
-                .startDate(LocalDate.now()).endDate(LocalDate.now().plusDays(10))
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
                 .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.DRAFT).build();
         when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
 
         assertThatThrownBy(() -> campaignService.update(999L, 5L, new CampaignUpdateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("100.00"), CampaignStatus.ACTIVE, false)))
+                LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
+                new BigDecimal("100.00"), CampaignStatus.PUBLISHED, false)))
                 .isInstanceOf(ForbiddenActionException.class);
     }
 
     @Test
-    void update_allowsOwnerToActivate() {
+    void update_rejectsManuallySettingAComputedStatus() {
         Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
-                .startDate(LocalDate.now()).endDate(LocalDate.now().plusDays(10))
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.DRAFT).build();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+
+        assertThatThrownBy(() -> campaignService.update(2L, 5L, new CampaignUpdateRequest("Launch", "desc",
+                LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
+                new BigDecimal("100.00"), CampaignStatus.LIVE, false)))
+                .isInstanceOf(InvalidStateTransitionException.class);
+    }
+
+    @Test
+    void update_allowsOwnerToPublish() {
+        Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
                 .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.DRAFT).build();
         when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
         when(campaignRepository.save(any(Campaign.class))).thenAnswer(inv -> inv.getArgument(0));
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 
         campaignService.update(2L, 5L, new CampaignUpdateRequest("Launch", "desc",
-                LocalDate.now(), LocalDate.now().plusDays(10), new BigDecimal("150.00"), CampaignStatus.ACTIVE, false));
+                LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
+                new BigDecimal("150.00"), CampaignStatus.PUBLISHED, false));
 
-        assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
+        assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.PUBLISHED);
         assertThat(campaign.getRatePerThousandViewsInr()).isEqualByComparingTo(new BigDecimal("150.00"));
     }
 
     @Test
-    void isOpenForSubmissions_trueOnlyWhenActiveAndWithinDateWindow() {
-        Campaign active = Campaign.builder().business(business).title("Launch")
-                .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(1))
-                .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.ACTIVE).build();
-        assertThat(active.isOpenForSubmissions()).isTrue();
+    void getEffectiveStatus_isUpcomingWhenBeforePublishStart() {
+        Campaign campaign = Campaign.builder().business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now().minusDays(1)).submissionDeadline(LocalDate.now().plusDays(4))
+                .publishStartAt(LocalDate.now().plusDays(5)).publishEndAt(LocalDate.now().plusDays(20))
+                .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.PUBLISHED).build();
 
+        assertThat(campaign.getEffectiveStatus()).isEqualTo(CampaignStatus.UPCOMING);
+        assertThat(campaign.isOpenForSubmissions()).isTrue();
+    }
+
+    @Test
+    void getEffectiveStatus_isLiveDuringPublishWindow_andClosedForSubmissions() {
+        Campaign campaign = Campaign.builder().business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now().minusDays(10)).submissionDeadline(LocalDate.now().minusDays(1))
+                .publishStartAt(LocalDate.now().minusDays(1)).publishEndAt(LocalDate.now().plusDays(10))
+                .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.PUBLISHED).build();
+
+        assertThat(campaign.getEffectiveStatus()).isEqualTo(CampaignStatus.LIVE);
+        assertThat(campaign.isOpenForSubmissions()).isFalse();
+    }
+
+    @Test
+    void getEffectiveStatus_isCompletedAfterPublishEnd() {
+        Campaign campaign = Campaign.builder().business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now().minusDays(30)).submissionDeadline(LocalDate.now().minusDays(20))
+                .publishStartAt(LocalDate.now().minusDays(19)).publishEndAt(LocalDate.now().minusDays(1))
+                .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.PUBLISHED).build();
+
+        assertThat(campaign.getEffectiveStatus()).isEqualTo(CampaignStatus.COMPLETED);
+        assertThat(campaign.isOpenForSubmissions()).isFalse();
+    }
+
+    @Test
+    void isOpenForSubmissions_falseWhenManuallyDraft_evenWithinSubmissionWindow() {
         Campaign draft = Campaign.builder().business(business).title("Launch")
-                .startDate(LocalDate.now().minusDays(1)).endDate(LocalDate.now().plusDays(1))
+                .submissionOpenAt(LocalDate.now().minusDays(1)).submissionDeadline(LocalDate.now().plusDays(4))
+                .publishStartAt(LocalDate.now().plusDays(5)).publishEndAt(LocalDate.now().plusDays(20))
                 .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.DRAFT).build();
-        assertThat(draft.isOpenForSubmissions()).isFalse();
 
-        Campaign expired = Campaign.builder().business(business).title("Launch")
-                .startDate(LocalDate.now().minusDays(10)).endDate(LocalDate.now().minusDays(1))
-                .ratePerThousandViewsInr(BigDecimal.TEN).status(CampaignStatus.ACTIVE).build();
-        assertThat(expired.isOpenForSubmissions()).isFalse();
+        assertThat(draft.getEffectiveStatus()).isEqualTo(CampaignStatus.DRAFT);
+        assertThat(draft.isOpenForSubmissions()).isFalse();
     }
 }

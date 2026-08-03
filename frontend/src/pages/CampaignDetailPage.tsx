@@ -4,16 +4,70 @@ import { campaignsApi } from "@/api/campaigns";
 import { useAuth } from "@/auth/AuthContext";
 import { FullPageSpinner } from "@/components/Spinner";
 import { Avatar } from "@/components/Avatar";
+import { StatusPill } from "@/components/StatusPill";
 import { ContentSubmitCard } from "@/features/content/ContentSubmitCard";
+import type { Campaign } from "@/types";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" });
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+
+function daysUntil(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+function SubmissionPanel({ campaign }: { campaign: Campaign }) {
+  if (campaign.status === "UPCOMING") {
+    const startsIn = daysUntil(campaign.publishStartAt);
+    const deadlineIn = daysUntil(campaign.submissionDeadline);
+    return (
+      <>
+        <div className="mb-4 flex flex-wrap gap-4 font-mono text-sm text-ink-600">
+          <span>
+            <span className="font-sans text-ink-400">Campaign starts in</span> {startsIn} day{startsIn === 1 ? "" : "s"}
+          </span>
+          <span>
+            <span className="font-sans text-ink-400">Submission closes in</span> {deadlineIn} day{deadlineIn === 1 ? "" : "s"}
+          </span>
+        </div>
+        {campaign.acceptingSubmissions ? (
+          <>
+            <p className="mb-4 text-sm text-ink-500">
+              Upload a piece of content for this campaign. The business will review it before it goes live — you can
+              submit as many pieces as you like.
+            </p>
+            <ContentSubmitCard campaign={campaign} />
+          </>
+        ) : (
+          <p className="text-sm text-ink-500">Submissions have not opened yet — check back soon to upload content.</p>
+        )}
+      </>
+    );
+  }
+
+  if (campaign.status === "LIVE") {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <StatusPill status="LIVE" />
+        <span className="text-sm text-ink-500">Views are being counted — submissions are closed for this campaign.</span>
+      </div>
+    );
+  }
+
+  if (campaign.status === "COMPLETED") {
+    return <p className="text-sm text-ink-500">Campaign ended. No further submissions or views are being counted.</p>;
+  }
+
+  return <p className="text-sm text-ink-500">This campaign isn't accepting submissions right now.</p>;
+}
 
 export function CampaignDetailPage() {
   const { id } = useParams();
   const campaignId = Number(id);
   const { user } = useAuth();
-
   const { data: campaign, isLoading } = useQuery({
     queryKey: ["campaign", campaignId],
     queryFn: () => campaignsApi.getById(campaignId),
@@ -32,8 +86,8 @@ export function CampaignDetailPage() {
           <p className="text-sm uppercase tracking-wide text-ink-400">{campaign.businessCompanyName}</p>
           <div className="mt-3 flex flex-wrap gap-4 font-mono text-sm text-ink-600">
             <span>
-              <span className="font-sans text-ink-400">Runs</span>{" "}
-              {dateFormatter.format(new Date(campaign.startDate))} – {dateFormatter.format(new Date(campaign.endDate))}
+              <span className="font-sans text-ink-400">Live</span>{" "}
+              {dateFormatter.format(new Date(campaign.publishStartAt))} – {dateFormatter.format(new Date(campaign.publishEndAt))}
             </span>
             <span className="font-semibold text-gold-deep">
               {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
@@ -46,19 +100,7 @@ export function CampaignDetailPage() {
               🔥 Hot
             </span>
           )}
-          {campaign.acceptingSubmissions ? (
-            <span className="rounded-full bg-signal-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-signal-deep">
-              Live
-            </span>
-          ) : campaign.status === "STARTING_SOON" ? (
-            <span className="rounded-full bg-gold-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-gold-deep">
-              Upcoming
-            </span>
-          ) : (
-            <span className="rounded-full bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-ink-500">
-              Closed
-            </span>
-          )}
+          <StatusPill status={campaign.status} />
         </div>
       </div>
 
@@ -72,19 +114,7 @@ export function CampaignDetailPage() {
       {user?.role === "CREATOR" && (
         <div className="card-surface p-7">
           <h2 className="mb-4 font-display text-lg font-semibold text-ink-800">Submit content</h2>
-          {campaign.acceptingSubmissions ? (
-            <>
-              <p className="mb-4 text-sm text-ink-500">
-                Upload a piece of content for this campaign. The business will review it before it goes live — you can
-                submit as many pieces as you like.
-              </p>
-              <ContentSubmitCard campaign={campaign} />
-            </>
-          ) : campaign.status === "STARTING_SOON" ? (
-            <p className="text-sm text-ink-500">This campaign hasn't gone live yet — check back once it's Live to submit content.</p>
-          ) : (
-            <p className="text-sm text-ink-500">This campaign is closed and no longer accepting content submissions.</p>
-          )}
+          <SubmissionPanel campaign={campaign} />
         </div>
       )}
     </div>
