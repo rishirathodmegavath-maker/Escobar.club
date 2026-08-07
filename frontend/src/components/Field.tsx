@@ -20,7 +20,7 @@ export function FieldWrapper({ label, error, hint, children }: FieldWrapperProps
 }
 
 const baseInputClasses =
-  "focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 transition-colors";
+  "focus-ring w-full rounded-lg border border-ink-200 bg-surface-input px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 transition-colors focus:border-signal-500";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;

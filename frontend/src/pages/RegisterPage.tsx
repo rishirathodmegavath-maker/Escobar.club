@@ -142,7 +142,9 @@ export function RegisterPage() {
                 }}
                 className={clsx(
                   "focus-ring rounded-md py-2 text-sm font-semibold transition-colors",
-                  role === r ? "bg-white text-ink-900 shadow-sm" : "text-ink-400 hover:text-ink-600",
+                  role === r
+                    ? "bg-gradient-to-br from-signal-500 to-signal-800 text-white shadow-[0_4px_18px_rgba(250,35,59,0.4)]"
+                    : "text-ink-400 hover:text-ink-700",
                 )}
               >
                 {r === "CREATOR" ? "I'm a Creator" : "I'm a Business"}

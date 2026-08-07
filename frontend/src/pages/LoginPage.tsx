@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Field";
 import { extractErrorMessage } from "@/api/client";
 import { HelpCircleIcon } from "@/components/icons";
+import { SignalMark } from "@/components/SignalMark";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -186,18 +187,15 @@ export function LoginPage() {
         to="/help"
         aria-label="Help for creators"
         title="Help for creators"
-        className="focus-ring absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-ink-200 bg-white text-ink-500 shadow-card hover:border-signal-300 hover:text-signal-700"
+        className="focus-ring absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-ink-200 bg-surface text-ink-500 shadow-card hover:border-signal-300 hover:text-signal-deep"
       >
         <HelpCircleIcon className="h-5 w-5" />
       </Link>
 
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gold-400 text-ink-900">
-            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-              <path d="M9 21.5V10.5H18.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M9 16H16.5" stroke="#2FBE9A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-ink-950">
+            <SignalMark size={26} />
           </div>
           <h1 className="font-display text-2xl font-semibold text-ink-900">{heading}</h1>
           <p className="mt-1 text-sm text-ink-400">{subheading}</p>

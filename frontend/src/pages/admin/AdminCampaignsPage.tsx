@@ -109,7 +109,7 @@ function CampaignCard({ campaign }: { campaign: AdminCampaignSummary }) {
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink-700">Display status shown to creators</span>
           <select
-            className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900"
+            className="focus-ring w-full rounded-lg border border-ink-200 bg-surface-input px-3.5 py-2.5 text-sm text-ink-900"
             value={displayStatus}
             onChange={(e) => setDisplayStatus(e.target.value as CampaignDisplayStatus)}
           >

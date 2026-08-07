@@ -62,7 +62,7 @@ export function CreatorHelpPage() {
                 step={VIEW_STEP}
                 value={totalViews}
                 onChange={(e) => setTotalViews(Math.max(0, Math.round(Number(e.target.value) || 0)))}
-                className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-center font-mono text-sm text-ink-900"
+                className="focus-ring w-full rounded-lg border border-ink-200 bg-surface-input px-3.5 py-2.5 text-center font-mono text-sm text-ink-900"
               />
               <Button
                 type="button"
@@ -81,11 +81,11 @@ export function CreatorHelpPage() {
                 <span className="font-display text-2xl font-semibold text-signal-deep">{inrFormatter.format(earningPotential)}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-white/70 p-3">
+                <div className="rounded-lg bg-surface-hover p-3">
                   <p className="text-xs uppercase tracking-wide text-ink-400">Per 1K views</p>
                   <p className="font-mono text-sm font-semibold text-ink-900">{inrFormatter.format(RATE_PER_1000_VIEWS_INR)}</p>
                 </div>
-                <div className="rounded-lg bg-white/70 p-3">
+                <div className="rounded-lg bg-surface-hover p-3">
                   <p className="text-xs uppercase tracking-wide text-ink-400">Total payout</p>
                   <p className="font-mono text-sm font-semibold text-ink-900">{inrFormatter.format(earningPotential)}</p>
                 </div>
@@ -98,7 +98,7 @@ export function CreatorHelpPage() {
                   key={views}
                   type="button"
                   onClick={() => setTotalViews(views)}
-                  className="focus-ring rounded-full border border-ink-200 bg-white px-3 py-1.5 font-mono text-xs font-medium text-ink-600 transition-colors hover:border-signal-300 hover:bg-signal-50 hover:text-signal-700"
+                  className="focus-ring rounded-full border border-ink-200 bg-surface px-3 py-1.5 font-mono text-xs font-medium text-ink-600 transition-colors hover:border-signal-300 hover:bg-signal-soft hover:text-signal-deep"
                 >
                   {formatViewCount(views)} views
                 </button>

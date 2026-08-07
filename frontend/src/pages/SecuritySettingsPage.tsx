@@ -107,7 +107,7 @@ export function SecuritySettingsPage() {
             </form>
           ) : (
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-signal-deep">Enabled</p>
+              <p className="text-sm font-medium text-mint-deep">Enabled</p>
               <Button variant="danger" onClick={() => setDisabling(true)}>
                 Disable
               </Button>

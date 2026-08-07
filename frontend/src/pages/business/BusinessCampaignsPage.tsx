@@ -99,7 +99,7 @@ function CampaignForm({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink-700">Status</span>
           <select
-            className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900"
+            className="focus-ring w-full rounded-lg border border-ink-200 bg-surface-input px-3.5 py-2.5 text-sm text-ink-900"
             {...register("status")}
           >
             <option value="PUBLISHED">Auto (Upcoming / Live / Completed, computed from dates)</option>
@@ -258,11 +258,32 @@ export function BusinessCampaignsPage() {
           description="Create your first campaign to start receiving creator content submissions."
         />
       ) : (
-        <div className="flex flex-col gap-5">
-          {data.content.map((campaign) => (
-            <CampaignListItem key={campaign.id} campaign={campaign} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-3 gap-3.5">
+            <div className="card-surface flex flex-col gap-1 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Total campaigns</p>
+              <p className="font-mono text-xl font-bold text-ink-900">{data.totalElements}</p>
+            </div>
+            <div className="card-surface flex flex-col gap-1 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Live now</p>
+              <p className="font-mono text-xl font-bold text-ink-900">
+                {data.content.filter((c) => c.status === "LIVE").length}
+              </p>
+            </div>
+            <div className="card-surface flex flex-col gap-1 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Awaiting admin</p>
+              <p className="font-mono text-xl font-bold text-ink-900">
+                {data.content.filter((c) => c.approvalStatus === "PENDING").length}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            {data.content.map((campaign) => (
+              <CampaignListItem key={campaign.id} campaign={campaign} />
+            ))}
+          </div>
+        </>
       )}
 
       {data && <Pagination page={data.page} totalPages={data.totalPages} last={data.last} onPageChange={setPage} />}

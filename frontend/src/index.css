@@ -2,14 +2,213 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------------------
+   Theme tokens. Light is the default (no attribute needed); [data-theme="dark"] overrides.
+   Numbered scales (ink/paper/signal/gold/alert/danger/mint) are stored as "R G B" triplets
+   so Tailwind's rgb(var(--x) / <alpha-value>) pattern keeps opacity modifiers (e.g.
+   border-ink-100/70) working across both themes. `soft`/`deep`/`surface-*` are stored as
+   complete color values (hex or rgba) since they're used as whole utilities with no
+   additional opacity modifier, and dark mode needs them to *be* translucent rather than
+   solid - a single alpha channel can't flip formula via a triplet alone.
+   --------------------------------------------------------------------------------------- */
 @layer base {
+  :root {
+    --ink-50: 243 244 246;
+    --ink-100: 228 230 234;
+    --ink-200: 201 204 212;
+    --ink-300: 162 167 180;
+    --ink-400: 118 124 141;
+    --ink-500: 86 92 109;
+    --ink-600: 63 68 83;
+    --ink-700: 46 50 62;
+    --ink-800: 30 33 42;
+    --ink-900: 20 22 31;
+    --ink-950: 11 12 16;
+
+    --paper-default: 241 243 246;
+    --paper-50: 255 255 255;
+    --paper-100: 241 243 246;
+    --paper-200: 225 229 235;
+    --paper-300: 211 216 224;
+
+    --signal-50: 255 240 241;
+    --signal-100: 255 217 220;
+    --signal-200: 255 179 186;
+    --signal-300: 255 138 150;
+    --signal-400: 252 90 108;
+    --signal-500: 250 35 59;
+    --signal-600: 224 27 52;
+    --signal-700: 184 20 42;
+    --signal-800: 142 15 40;
+    --signal-900: 92 10 27;
+    --signal-soft: #ffe5e8;
+    --signal-deep: #c4122f;
+
+    --gold-50: 251 243 227;
+    --gold-100: 244 225 184;
+    --gold-200: 234 203 132;
+    --gold-300: 223 180 86;
+    --gold-400: 219 162 58;
+    --gold-500: 191 139 34;
+    --gold-600: 156 112 27;
+    --gold-700: 120 86 21;
+    --gold-soft: #fbf1de;
+    --gold-deep: #8c6318;
+
+    --alert-50: 255 241 236;
+    --alert-100: 255 220 207;
+    --alert-200: 255 184 160;
+    --alert-300: 255 150 120;
+    --alert-400: 255 127 92;
+    --alert-500: 255 107 74;
+    --alert-600: 228 80 46;
+    --alert-700: 185 62 34;
+    --alert-soft: #ffe9e2;
+    --alert-deep: #b4431f;
+
+    --danger-50: 253 236 236;
+    --danger-100: 251 212 212;
+    --danger-200: 245 168 168;
+    --danger-300: 238 124 124;
+    --danger-400: 233 96 96;
+    --danger-500: 229 72 77;
+    --danger-600: 193 50 57;
+    --danger-700: 153 39 48;
+    --danger-soft: #fbe6e6;
+    --danger-deep: #a22125;
+
+    --mint-50: 238 251 247;
+    --mint-100: 219 247 239;
+    --mint-200: 184 238 223;
+    --mint-300: 140 224 203;
+    --mint-400: 87 205 175;
+    --mint-500: 47 190 154;
+    --mint-600: 31 155 125;
+    --mint-700: 24 125 101;
+    --mint-soft: #e3f6f0;
+    --mint-deep: #0e6b54;
+
+    --surface: #ffffff;
+    --surface-hover: #f5f6f8;
+    --surface-input: #ffffff;
+    --surface-border: rgba(20, 22, 31, 0.08);
+    --page-bg: #f1f3f6;
+
+    --hero-bg: radial-gradient(560px 280px at 88% -20%, rgba(250, 35, 59, 0.07), transparent 60%),
+      linear-gradient(120deg, rgba(250, 35, 59, 0.05), rgba(142, 15, 40, 0.02));
+    --hero-shadow: 0 14px 32px -20px rgba(250, 35, 59, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --nowbar-bg: rgba(255, 255, 255, 0.9);
+    --nowbar-shadow: 0 -4px 16px rgba(20, 22, 31, 0.06), 0 14px 30px -18px rgba(250, 35, 59, 0.18);
+    --scrollbar-thumb: rgba(20, 22, 31, 0.16);
+    --scrollbar-thumb-hover: rgba(20, 22, 31, 0.28);
+
+    --shadow-card: 0 1px 2px rgba(20, 22, 31, 0.05), 0 6px 16px rgba(20, 22, 31, 0.05);
+    --shadow-card-hover: 0 2px 4px rgba(20, 22, 31, 0.06), 0 14px 32px rgba(20, 22, 31, 0.1);
+    --shadow-pop: 0 8px 30px rgba(20, 22, 31, 0.12);
+  }
+
+  :root[data-theme="dark"] {
+    --ink-50: 28 28 30;
+    --ink-100: 44 44 46;
+    --ink-200: 58 58 60;
+    --ink-300: 90 90 94;
+    --ink-400: 110 110 115;
+    --ink-500: 155 155 161;
+    --ink-600: 184 184 189;
+    --ink-700: 199 199 204;
+    --ink-800: 229 229 234;
+    --ink-900: 245 245 247;
+    --ink-950: 0 0 0;
+
+    --paper-default: 22 20 18;
+    --paper-50: 255 255 255;
+    --paper-100: 32 29 26;
+    --paper-200: 41 37 33;
+    --paper-300: 51 46 41;
+
+    --signal-50: 58 6 17;
+    --signal-100: 92 10 27;
+    --signal-200: 130 16 42;
+    --signal-300: 176 24 57;
+    --signal-400: 227 32 65;
+    --signal-500: 250 35 59;
+    --signal-600: 224 27 52;
+    --signal-700: 184 20 42;
+    --signal-800: 142 15 40;
+    --signal-900: 92 10 27;
+    --signal-soft: rgba(250, 35, 59, 0.14);
+    --signal-deep: #ff4d66;
+
+    --gold-50: 58 46 16;
+    --gold-100: 92 72 26;
+    --gold-200: 140 110 40;
+    --gold-300: 191 150 54;
+    --gold-400: 219 162 58;
+    --gold-500: 232 184 77;
+    --gold-600: 240 200 104;
+    --gold-700: 245 214 137;
+    --gold-soft: rgba(219, 162, 58, 0.16);
+    --gold-deep: #e8b84d;
+
+    --alert-50: 58 26 16;
+    --alert-100: 92 42 26;
+    --alert-200: 140 63 40;
+    --alert-300: 192 89 54;
+    --alert-400: 255 127 92;
+    --alert-500: 255 107 74;
+    --alert-600: 228 80 46;
+    --alert-700: 185 62 34;
+    --alert-soft: rgba(255, 107, 74, 0.16);
+    --alert-deep: #ff9268;
+
+    --danger-50: 46 16 19;
+    --danger-100: 74 26 31;
+    --danger-200: 110 38 45;
+    --danger-300: 155 51 60;
+    --danger-400: 229 72 77;
+    --danger-500: 255 105 97;
+    --danger-600: 255 69 58;
+    --danger-700: 193 50 57;
+    --danger-soft: rgba(255, 105, 97, 0.16);
+    --danger-deep: #ff453a;
+
+    --mint-50: 10 46 34;
+    --mint-100: 15 69 49;
+    --mint-200: 22 96 67;
+    --mint-300: 29 125 86;
+    --mint-400: 34 160 109;
+    --mint-500: 52 211 153;
+    --mint-600: 74 222 158;
+    --mint-700: 110 231 183;
+    --mint-soft: rgba(52, 211, 153, 0.16);
+    --mint-deep: #34d399;
+
+    --surface: rgba(255, 255, 255, 0.05);
+    --surface-hover: rgba(255, 255, 255, 0.08);
+    --surface-input: rgba(255, 255, 255, 0.05);
+    --surface-border: rgba(255, 255, 255, 0.12);
+    --page-bg: #161412;
+
+    --hero-bg: radial-gradient(560px 280px at 88% -20%, rgba(251, 92, 116, 0.28), transparent 60%),
+      linear-gradient(120deg, rgba(250, 35, 59, 0.2), rgba(142, 15, 40, 0.1));
+    --hero-shadow: 0 20px 50px -24px rgba(250, 35, 59, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --nowbar-bg: rgba(32, 28, 25, 0.82);
+    --nowbar-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28), 0 18px 40px -18px rgba(250, 35, 59, 0.32);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.14);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+
+    --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px -14px rgba(0, 0, 0, 0.65);
+    --shadow-card-hover: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 16px 34px -14px rgba(0, 0, 0, 0.75);
+    --shadow-pop: 0 20px 50px -18px rgba(0, 0, 0, 0.8);
+  }
+
   html {
-    background-color: #f1f3f6;
+    background-color: var(--page-bg);
   }
 
   ::selection {
-    background-color: #dbf7ef;
-    color: #14161f;
+    background-color: var(--signal-soft);
+    color: rgb(var(--ink-900));
   }
 
   h1,
@@ -22,15 +221,92 @@
 
 @layer components {
   .focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-signal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-signal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
   }
 
+  /* Cursor-tracking highlight for buttons - --mx/--my are set from JS on mousemove
+     (see Button.tsx). `.isolate` on the button (its own class, see Button.tsx) gives
+     this its own local stacking context, so z-index: -1 lands right above the button's
+     background instead of escaping to some ancestor's - without that, the glow renders
+     invisibly behind unrelated page content. */
+  .btn-shine::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(110px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.4), transparent 70%);
+    opacity: 0;
+    filter: blur(1px);
+    transition: opacity 0.3s ease-out;
+    pointer-events: none;
+  }
+  .btn-shine:hover::before {
+    opacity: 1;
+  }
+
+  /* Press feedback: quick, linear snap down; springy, overshooting bounce back up on
+     release - the "down fast, up bouncy" pairing is what reads as iOS-style rather than
+     a flat linear tap. Lives here (not Tailwind's transition-* utilities) because down
+     and up need genuinely different timing functions, not just different durations. */
+  .btn-shine {
+    transition:
+      transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.3s ease-out,
+      background-color 0.2s ease-out,
+      border-color 0.2s ease-out,
+      opacity 0.2s ease-out;
+  }
+  .btn-shine:active {
+    transition-duration: 0.09s;
+    transition-timing-function: ease-out;
+  }
+
+  /* Water-drop ripple spawned from the exact press point (see Button.tsx onPointerDown). */
+  .btn-ripple {
+    position: absolute;
+    z-index: -1;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.22) 45%, transparent 72%);
+    pointer-events: none;
+    animation: btn-ripple-pop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes btn-ripple-pop {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.85; }
+    55% { opacity: 0.45; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-shine, .btn-shine:active { transition-duration: 0.01ms !important; }
+    .btn-ripple { display: none; }
+  }
+
+  /* Every card/table/panel in the app resolves to this one class, so the theme swap
+     (solid white card <-> translucent glass-on-black) lives entirely here. */
   .card-surface {
-    @apply rounded-xl2 border border-ink-100/70 bg-white shadow-card transition-shadow duration-200;
+    @apply rounded-xl2 border bg-surface shadow-card backdrop-blur-sm transition-colors duration-200;
+    border-color: var(--surface-border);
   }
 
   .card-surface:hover {
-    @apply shadow-card-hover;
+    @apply bg-surface-hover shadow-card-hover;
+  }
+
+  /* Editorial banner used at the top of dashboard-style pages. */
+  .hero-card {
+    @apply relative overflow-hidden rounded-xl2 border p-6;
+    background: var(--hero-bg);
+    box-shadow: var(--hero-shadow);
+    border-color: var(--surface-border);
+  }
+
+  /* Persistent contextual bar pinned to the bottom of the main column. */
+  .now-bar {
+    @apply sticky bottom-4 z-10 mt-6 flex items-center gap-4 rounded-2xl border px-5 py-3.5;
+    background: var(--nowbar-bg);
+    border-color: var(--surface-border);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--nowbar-shadow);
   }
 }
 
@@ -41,7 +317,8 @@
   .animate-wordmark-in,
   .animate-lockup-settle,
   .animate-splash-in,
-  .animate-splash-out {
+  .animate-splash-out,
+  .animate-drift {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -57,12 +334,12 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #e4e6ea;
+  background-color: var(--scrollbar-thumb);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #c9ccd4;
+  background-color: var(--scrollbar-thumb-hover);
   background-clip: content-box;
 }

@@ -65,7 +65,7 @@ export function DiscoverCampaignsPage() {
             setPage(0);
           }}
           placeholder="Search by campaign title…"
-          className="focus-ring w-full max-w-sm rounded-[10px] border border-ink-200 bg-white px-4 py-2.5 text-sm placeholder:text-ink-300 sm:max-w-xs"
+          className="focus-ring w-full max-w-sm rounded-[10px] border border-ink-200 bg-surface-input px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 sm:max-w-xs"
         />
       </div>
 
@@ -79,6 +79,23 @@ export function DiscoverCampaignsPage() {
         />
       ) : (
         <>
+          {category === "HOT" && !search && (
+            <div className="hero-card flex items-center gap-6">
+              <div className="flex h-[92px] w-[92px] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-signal-500 to-signal-800 text-4xl shadow-[0_18px_34px_-12px_rgba(0,0,0,0.55)]">
+                🔥
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="w-fit rounded-full bg-danger-soft px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-danger-deep">
+                  Hot right now
+                </span>
+                <h2 className="truncate font-display text-2xl font-bold leading-tight text-ink-900">{data.content[0].title}</h2>
+                <p className="text-sm text-ink-500">
+                  {data.content[0].businessCompanyName} · ₹{data.content[0].ratePerThousandViewsInr} per 1,000 views
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 ${isFetching ? "opacity-60" : ""}`}>
             {data.content.map((campaign) => (
               <CampaignCard key={campaign.id} campaign={campaign} />

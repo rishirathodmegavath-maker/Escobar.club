@@ -10,7 +10,7 @@ function initialsFrom(name: string) {
 }
 
 const palette = [
-  "bg-signal-soft text-signal-deep",
+  "bg-mint-soft text-mint-deep",
   "bg-gold-soft text-gold-deep",
   "bg-alert-soft text-alert-deep",
   "bg-danger-soft text-danger-deep",

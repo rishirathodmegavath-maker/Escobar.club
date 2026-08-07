@@ -52,7 +52,7 @@ export function KycDocumentUploadField({ value, onChange, error }: KycDocumentUp
             {isImage ? (
               <img src={value} alt="" className="max-h-48 rounded-lg object-cover" />
             ) : (
-              <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm text-ink-700">
+              <div className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface px-4 py-3 text-sm text-ink-700">
                 📄 PAN document uploaded
               </div>
             )}

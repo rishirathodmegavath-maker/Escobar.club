@@ -1,78 +1,47 @@
+// Builds a Tailwind color scale that reads from CSS variables defined in index.css, so
+// `text-ink-900`, `border-ink-100/70`, etc. resolve to different values per [data-theme]
+// without any component needing a dark: variant.
+function shade(name) {
+  const scale = {};
+  for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
+    scale[step] = `rgb(var(--${name}-${step}) / <alpha-value>)`;
+  }
+  scale.soft = `var(--${name}-soft)`;
+  scale.deep = `var(--${name}-deep)`;
+  return scale;
+}
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        ink: {
-          50: "#F3F4F6",
-          100: "#E4E6EA",
-          200: "#C9CCD4",
-          300: "#A2A7B4",
-          400: "#767C8D",
-          500: "#565C6D",
-          600: "#3F4453",
-          700: "#2E323E",
-          800: "#1E212A",
-          900: "#14161F",
-          950: "#0B0C10",
-        },
+        // Every numbered scale reads from a CSS variable (see index.css :root /
+        // [data-theme="dark"]) via the rgb(var(..) / <alpha-value>) pattern, so opacity
+        // modifiers like `border-ink-100/70` keep working and light/dark is a single
+        // attribute flip - no per-component dark: variants needed for these tokens.
+        ink: { ...shade("ink"), 950: "rgb(var(--ink-950) / <alpha-value>)" },
+        signal: shade("signal"),
+        gold: shade("gold"),
+        alert: shade("alert"),
+        danger: shade("danger"),
+        mint: shade("mint"),
         paper: {
-          DEFAULT: "#F1F3F6",
-          50: "#FFFFFF",
-          100: "#F1F3F6",
-          200: "#E1E5EB",
-          300: "#D3D8E0",
+          DEFAULT: "rgb(var(--paper-default) / <alpha-value>)",
+          50: "rgb(var(--paper-50) / <alpha-value>)",
+          100: "rgb(var(--paper-100) / <alpha-value>)",
+          200: "rgb(var(--paper-200) / <alpha-value>)",
+          300: "rgb(var(--paper-300) / <alpha-value>)",
         },
-        signal: {
-          50: "#EEFBF7",
-          100: "#DBF7EF",
-          200: "#B8EEDF",
-          300: "#8CE0CB",
-          400: "#57CDAF",
-          500: "#2FBE9A",
-          600: "#1F9B7D",
-          700: "#187D65",
-          800: "#146552",
-          900: "#0E6B54",
-          soft: "#E3F6F0",
-          deep: "#0E6B54",
-        },
-        gold: {
-          50: "#FBF3E3",
-          100: "#F4E1B8",
-          200: "#EACB84",
-          300: "#DFB456",
-          400: "#DBA23A",
-          500: "#BF8B22",
-          600: "#9C701B",
-          700: "#785615",
-          soft: "#FBF1DE",
-          deep: "#8C6318",
-        },
-        alert: {
-          50: "#FFF1EC",
-          100: "#FFDCCF",
-          200: "#FFB8A0",
-          300: "#FF9678",
-          400: "#FF7F5C",
-          500: "#FF6B4A",
-          600: "#E4502E",
-          700: "#B93E22",
-          soft: "#FFE9E2",
-          deep: "#B4431F",
-        },
-        danger: {
-          50: "#FDECEC",
-          100: "#FBD4D4",
-          200: "#F5A8A8",
-          300: "#EE7C7C",
-          400: "#E96060",
-          500: "#E5484D",
-          600: "#C13239",
-          700: "#992730",
-          soft: "#FBE6E6",
-          deep: "#A22125",
+        // Glass/card fill roles: solid in light mode, translucent-on-black in dark mode.
+        // The formula itself (not just the hue) differs per theme, so these hold whole
+        // color values rather than triplets - see index.css.
+        surface: {
+          DEFAULT: "var(--surface)",
+          hover: "var(--surface-hover)",
+          input: "var(--surface-input)",
+          border: "var(--surface-border)",
         },
       },
       fontFamily: {
@@ -81,9 +50,9 @@ export default {
         mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(20,22,31,0.05), 0 6px 16px rgba(20,22,31,0.05)",
-        "card-hover": "0 2px 4px rgba(20,22,31,0.06), 0 14px 32px rgba(20,22,31,0.10)",
-        pop: "0 8px 30px rgba(20,22,31,0.12)",
+        card: "var(--shadow-card)",
+        "card-hover": "var(--shadow-card-hover)",
+        pop: "var(--shadow-pop)",
       },
       borderRadius: {
         xl2: "1rem",
@@ -125,6 +94,10 @@ export default {
           "0%": { opacity: 1, transform: "scale(1)" },
           "100%": { opacity: 0, transform: "scale(1.04)" },
         },
+        drift: {
+          "0%": { transform: "translate(0, 0) scale(1)" },
+          "100%": { transform: "translate(40px, 30px) scale(1.08)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.25s ease-out",
@@ -135,6 +108,7 @@ export default {
         "lockup-settle": "lockup-settle 0.8s cubic-bezier(0.65,0,0.35,1) both",
         "splash-in": "splash-in 0.25s ease-out both",
         "splash-out": "splash-out 0.42s cubic-bezier(0.4,0,1,1) both",
+        drift: "drift 22s ease-in-out infinite alternate",
       },
     },
   },

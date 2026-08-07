@@ -117,7 +117,7 @@ export function CreatorProfilePage() {
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink-700">Open to other niches?</span>
           <select
-            className="focus-ring w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900"
+            className="focus-ring w-full rounded-lg border border-ink-200 bg-surface-input px-3.5 py-2.5 text-sm text-ink-900"
             {...register("openToOtherNiches")}
           >
             <option value="false">No — only my primary niche</option>

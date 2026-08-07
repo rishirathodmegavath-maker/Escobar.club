@@ -3,12 +3,26 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useAuth } from "@/auth/AuthContext";
+import { useTheme } from "@/theme/ThemeContext";
 import { businessesApi } from "@/api/businesses";
 import { creatorsApi } from "@/api/creators";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { SignalMark } from "./SignalMark";
-import { CompassIcon, ImageStackIcon, UserIcon, LogoutIcon, TrophyIcon, MegaphoneIcon, IdCardIcon, ShieldIcon, SparkIcon, EyeIcon } from "./icons";
+import {
+  CompassIcon,
+  ImageStackIcon,
+  UserIcon,
+  LogoutIcon,
+  TrophyIcon,
+  MegaphoneIcon,
+  IdCardIcon,
+  ShieldIcon,
+  SparkIcon,
+  EyeIcon,
+  SunIcon,
+  MoonIcon,
+} from "./icons";
 
 interface NavItem {
   to: string;
@@ -16,43 +30,79 @@ interface NavItem {
   icon: (props: { className?: string }) => JSX.Element;
 }
 
-function navItemsForRole(role: string | undefined): NavItem[] {
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+function navSectionsForRole(role: string | undefined): NavSection[] {
   if (role === "BUSINESS") {
     return [
-      { to: "/", label: "Discover", icon: CompassIcon },
-      { to: "/business/campaigns", label: "My campaigns", icon: MegaphoneIcon },
-      { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
-      { to: "/business/leaderboard", label: "Leaderboard", icon: TrophyIcon },
-      { to: "/business/profile", label: "Company profile", icon: UserIcon },
-      { to: "/account/security", label: "Security", icon: ShieldIcon },
+      {
+        label: "Browse",
+        items: [
+          { to: "/", label: "Discover", icon: CompassIcon },
+          { to: "/business/leaderboard", label: "Leaderboard", icon: TrophyIcon },
+        ],
+      },
+      {
+        label: "Manage",
+        items: [
+          { to: "/business/campaigns", label: "My campaigns", icon: MegaphoneIcon },
+          { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
+          { to: "/business/profile", label: "Company profile", icon: UserIcon },
+          { to: "/account/security", label: "Security", icon: ShieldIcon },
+        ],
+      },
     ];
   }
   if (role === "CREATOR") {
     return [
-      { to: "/", label: "Discover", icon: CompassIcon },
-      { to: "/creator/content", label: "My submissions", icon: ImageStackIcon },
-      { to: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
-      { to: "/creator/kyc", label: "My KYC", icon: IdCardIcon },
-      { to: "/creator/profile", label: "My profile", icon: UserIcon },
-      { to: "/account/security", label: "Security", icon: ShieldIcon },
+      {
+        label: "Browse",
+        items: [
+          { to: "/", label: "Discover", icon: CompassIcon },
+          { to: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
+        ],
+      },
+      {
+        label: "You",
+        items: [
+          { to: "/creator/content", label: "My submissions", icon: ImageStackIcon },
+          { to: "/creator/kyc", label: "My KYC", icon: IdCardIcon },
+          { to: "/creator/profile", label: "My profile", icon: UserIcon },
+          { to: "/account/security", label: "Security", icon: ShieldIcon },
+        ],
+      },
     ];
   }
   if (role === "ADMIN") {
     return [
-      { to: "/admin", label: "Dashboard", icon: SparkIcon },
-      { to: "/admin/creators", label: "Creators", icon: UserIcon },
-      { to: "/admin/businesses", label: "Brands", icon: MegaphoneIcon },
-      { to: "/admin/campaigns", label: "Campaigns", icon: CompassIcon },
-      { to: "/admin/content", label: "Content & metrics", icon: EyeIcon },
+      {
+        label: "Oversight",
+        items: [
+          { to: "/admin", label: "Dashboard", icon: SparkIcon },
+          { to: "/admin/content", label: "Content & metrics", icon: EyeIcon },
+        ],
+      },
+      {
+        label: "Manage",
+        items: [
+          { to: "/admin/creators", label: "Creators", icon: UserIcon },
+          { to: "/admin/businesses", label: "Brands", icon: MegaphoneIcon },
+          { to: "/admin/campaigns", label: "Campaigns", icon: CompassIcon },
+        ],
+      },
     ];
   }
-  return [{ to: "/", label: "Discover", icon: CompassIcon }];
+  return [{ label: "Browse", items: [{ to: "/", label: "Discover", icon: CompassIcon }] }];
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const items = navItemsForRole(user?.role);
+  const sections = navSectionsForRole(user?.role);
 
   const { data: businessProfile } = useQuery({
     queryKey: ["business", "me"],
@@ -68,30 +118,48 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-paper">
-      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-ink-900 px-5 py-6">
+      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-[#100E0C] px-5 py-6">
         <div className="mb-8 flex items-center gap-2.5 px-2">
           <SignalMark size={30} />
           <span className="font-display text-lg font-semibold tracking-tight text-paper-50">Escobar.Club</span>
+          <button
+            type="button"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={toggleTheme}
+            className="focus-ring ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+          >
+            {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+          </button>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/" || item.to === "/admin"}
-              className={({ isActive }) =>
-                clsx(
-                  "focus-ring flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "border-signal-500 bg-white/10 text-paper-50"
-                    : "border-transparent text-paper-50/60 hover:bg-white/5 hover:text-paper-50",
-                )
-              }
-            >
-              <item.icon className="h-[18px] w-[18px]" />
-              {item.label}
-            </NavLink>
+          {sections.map((section) => (
+            <div key={section.label} className="mb-1">
+              <p className="mb-1.5 mt-3.5 px-3 text-[10.5px] font-bold uppercase tracking-wide text-paper-50/35 first:mt-0">
+                {section.label}
+              </p>
+              <div className="flex flex-col gap-1">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/" || item.to === "/admin"}
+                    className={({ isActive }) =>
+                      clsx(
+                        "focus-ring flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive
+                          ? "border-signal-500 bg-white/10 text-paper-50"
+                          : "border-transparent text-paper-50/60 hover:bg-white/5 hover:text-paper-50",
+                      )
+                    }
+                  >
+                    <item.icon className="h-[18px] w-[18px]" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
