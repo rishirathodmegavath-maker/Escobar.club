@@ -26,6 +26,7 @@ import { AdminCreatorsPage } from "@/pages/admin/AdminCreatorsPage";
 import { AdminBusinessesPage } from "@/pages/admin/AdminBusinessesPage";
 import { AdminCampaignsPage } from "@/pages/admin/AdminCampaignsPage";
 import { AdminContentPage } from "@/pages/admin/AdminContentPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
   const { isReady } = useAuth();
@@ -207,7 +208,7 @@ export default function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
