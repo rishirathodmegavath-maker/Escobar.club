@@ -4,15 +4,18 @@ import {
   type ForgotPasswordPayload,
   type GoogleAuthPayload,
   type LoginPayload,
+  type OtpRequestPayload,
+  type OtpVerifyPayload,
   type RegisterPayload,
   type RegisterResult,
   type ResendVerificationPayload,
   type ResetPasswordPayload,
+  type TwoFactorVerifyPayload,
   type VerifyEmailPayload,
 } from "@/api/auth";
 import { accountApi, type SetPasswordPayload } from "@/api/account";
 import { onUnauthorized, tokenStorage } from "@/api/client";
-import type { UserSummary } from "@/types";
+import type { LoginResult, UserSummary } from "@/types";
 
 const USER_KEY = "escobar.user";
 
@@ -20,9 +23,12 @@ interface AuthContextValue {
   user: UserSummary | null;
   isAuthenticated: boolean;
   isReady: boolean;
-  login: (payload: LoginPayload) => Promise<UserSummary>;
+  login: (payload: LoginPayload) => Promise<LoginResult>;
+  verifyTwoFactor: (payload: TwoFactorVerifyPayload) => Promise<UserSummary>;
+  requestOtp: (payload: OtpRequestPayload) => Promise<void>;
+  loginWithOtp: (payload: OtpVerifyPayload) => Promise<LoginResult>;
   register: (payload: RegisterPayload) => Promise<RegisterResult>;
-  loginWithGoogle: (payload: GoogleAuthPayload) => Promise<UserSummary>;
+  loginWithGoogle: (payload: GoogleAuthPayload) => Promise<LoginResult>;
   forgotPassword: (payload: ForgotPasswordPayload) => Promise<void>;
   resetPassword: (payload: ResetPasswordPayload) => Promise<void>;
   setPassword: (payload: SetPasswordPayload) => Promise<UserSummary>;
@@ -52,17 +58,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const persist = useCallback((nextUser: UserSummary, accessToken: string, refreshToken: string) => {
-    tokenStorage.setTokens(accessToken, refreshToken);
+  const persist = useCallback((nextUser: UserSummary, accessToken: string, refreshToken: string, sessionId: number) => {
+    tokenStorage.setTokens(accessToken, refreshToken, sessionId);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
   }, []);
 
   const login = useCallback(
-    async (payload: LoginPayload) => {
+    async (payload: LoginPayload): Promise<LoginResult> => {
       const response = await authApi.login(payload);
-      persist(response.user, response.accessToken, response.refreshToken);
+      if (response.requiresTwoFactor) {
+        return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
+      }
+      const auth = response.auth!;
+      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      return { status: "success", user: auth.user };
+    },
+    [persist],
+  );
+
+  const verifyTwoFactor = useCallback(
+    async (payload: TwoFactorVerifyPayload) => {
+      const response = await authApi.verifyTwoFactor(payload);
+      persist(response.user, response.accessToken, response.refreshToken, response.sessionId);
       return response.user;
+    },
+    [persist],
+  );
+
+  const requestOtp = useCallback((payload: OtpRequestPayload) => authApi.requestOtp(payload), []);
+
+  const loginWithOtp = useCallback(
+    async (payload: OtpVerifyPayload): Promise<LoginResult> => {
+      const response = await authApi.verifyOtp(payload);
+      if (response.requiresTwoFactor) {
+        return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
+      }
+      const auth = response.auth!;
+      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      return { status: "success", user: auth.user };
     },
     [persist],
   );
@@ -70,10 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (payload: RegisterPayload) => authApi.register(payload), []);
 
   const loginWithGoogle = useCallback(
-    async (payload: GoogleAuthPayload) => {
+    async (payload: GoogleAuthPayload): Promise<LoginResult> => {
       const response = await authApi.googleAuth(payload);
-      persist(response.user, response.accessToken, response.refreshToken);
-      return response.user;
+      if (response.requiresTwoFactor) {
+        return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
+      }
+      const auth = response.auth!;
+      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      return { status: "success", user: auth.user };
     },
     [persist],
   );
@@ -92,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyEmail = useCallback(
     async (payload: VerifyEmailPayload) => {
       const response = await authApi.verifyEmail(payload);
-      persist(response.user, response.accessToken, response.refreshToken);
+      persist(response.user, response.accessToken, response.refreshToken, response.sessionId);
       return response.user;
     },
     [persist],
@@ -119,6 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isReady,
       login,
+      verifyTwoFactor,
+      requestOtp,
+      loginWithOtp,
       register,
       loginWithGoogle,
       forgotPassword,
@@ -132,6 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isReady,
       login,
+      verifyTwoFactor,
+      requestOtp,
+      loginWithOtp,
       register,
       loginWithGoogle,
       forgotPassword,

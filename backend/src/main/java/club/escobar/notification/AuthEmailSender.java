@@ -12,4 +12,8 @@ public interface AuthEmailSender {
     void sendPasswordResetEmail(User user, String resetLink);
 
     void sendVerificationEmail(User user, String verifyLink);
+
+    void sendAccountLockedNotice(User user);
+
+    void sendLoginOtpEmail(User user, String code);
 }

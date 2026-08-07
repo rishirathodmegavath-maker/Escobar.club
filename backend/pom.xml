@@ -94,6 +94,13 @@
       <version>2.7.0</version>
     </dependency>
 
+    <!-- TOTP (RFC 6238) for authenticator-app two-factor login -->
+    <dependency>
+      <groupId>dev.samstevens.totp</groupId>
+      <artifactId>totp</artifactId>
+      <version>1.7.1</version>
+    </dependency>
+
     <!-- MapStruct -->
     <dependency>
       <groupId>org.mapstruct</groupId>

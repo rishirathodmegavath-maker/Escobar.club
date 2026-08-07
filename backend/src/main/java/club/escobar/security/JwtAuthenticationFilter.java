@@ -50,9 +50,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 SecurityUser user = userDetailsService.loadUserByUsername(email);
-                var authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                // Re-checked fresh from the DB on every request (not just at login) so a suspended
+                // account loses access immediately, even with an already-issued access token.
+                if (user.isActive()) {
+                    var authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
         } catch (JwtException | IllegalArgumentException e) {
             log.debug("Rejecting request with invalid JWT: {}", e.getMessage());

@@ -6,6 +6,7 @@ public record UserSummaryResponse(
         Long id,
         String email,
         UserRole role,
-        boolean hasPassword
+        boolean hasPassword,
+        boolean twoFactorEnabled
 ) {
 }

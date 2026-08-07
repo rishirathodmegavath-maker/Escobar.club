@@ -17,6 +17,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtService {
 
+    private static final long TWO_FACTOR_CHALLENGE_TTL_SECONDS = 5 * 60;
+
     private final JwtProperties jwtProperties;
 
     private SecretKey signingKey() {
@@ -52,6 +54,32 @@ public class JwtService {
 
     public Instant refreshTokenExpiry() {
         return Instant.now().plusSeconds(jwtProperties.refreshTokenTtlDays() * 24 * 3600);
+    }
+
+    /**
+     * Short-lived token proving the password step already succeeded; only redeemable once via
+     * /auth/2fa/verify. Carries a unique jti so the caller can record it as consumed on first
+     * successful redemption - the JWT itself stays cryptographically valid until it expires, but a
+     * second redemption attempt with the same jti must be rejected.
+     */
+    public String generateTwoFactorChallengeToken(SecurityUser user) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .id(java.util.UUID.randomUUID().toString())
+                .claims(Map.of("uid", user.getId(), "type", "2fa_challenge"))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(TWO_FACTOR_CHALLENGE_TTL_SECONDS)))
+                .signWith(signingKey())
+                .compact();
+    }
+
+    public boolean isTwoFactorChallengeToken(String token) {
+        try {
+            return "2fa_challenge".equals(parseClaims(token).get("type"));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public Claims parseClaims(String token) {

@@ -22,4 +22,14 @@ public class LoggingAuthEmailSender implements AuthEmailSender {
     public void sendVerificationEmail(User user, String verifyLink) {
         log.info("Verification email requested for user id={} email={}. Verify link: {}", user.getId(), user.getEmail(), verifyLink);
     }
+
+    @Override
+    public void sendAccountLockedNotice(User user) {
+        log.info("Account locked due to repeated failed login attempts: user id={} email={}", user.getId(), user.getEmail());
+    }
+
+    @Override
+    public void sendLoginOtpEmail(User user, String code) {
+        log.info("Login OTP requested for user id={} email={}. Code: {}", user.getId(), user.getEmail(), code);
+    }
 }

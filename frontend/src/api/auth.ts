@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { AuthResponse, UserRole } from "@/types";
+import type { AuthResponse, LoginResponse, UserRole } from "@/types";
 
 export interface RegisterPayload {
   email: string;
@@ -46,14 +46,34 @@ export interface ResendVerificationPayload {
   email: string;
 }
 
+export interface TwoFactorVerifyPayload {
+  challengeToken: string;
+  code: string;
+}
+
+export interface OtpRequestPayload {
+  email: string;
+}
+
+export interface OtpVerifyPayload {
+  email: string;
+  code: string;
+}
+
 export const authApi = {
   register: (payload: RegisterPayload) =>
     apiClient.post<RegisterResult>("/auth/register", payload).then((r) => r.data),
   login: (payload: LoginPayload) =>
-    apiClient.post<AuthResponse>("/auth/login", payload).then((r) => r.data),
+    apiClient.post<LoginResponse>("/auth/login", payload).then((r) => r.data),
+  verifyTwoFactor: (payload: TwoFactorVerifyPayload) =>
+    apiClient.post<AuthResponse>("/auth/2fa/verify", payload).then((r) => r.data),
+  requestOtp: (payload: OtpRequestPayload) =>
+    apiClient.post<void>("/auth/otp/request", payload).then((r) => r.data),
+  verifyOtp: (payload: OtpVerifyPayload) =>
+    apiClient.post<LoginResponse>("/auth/otp/verify", payload).then((r) => r.data),
   logout: (refreshToken: string) => apiClient.post("/auth/logout", { refreshToken }),
   googleAuth: (payload: GoogleAuthPayload) =>
-    apiClient.post<AuthResponse>("/auth/google", payload).then((r) => r.data),
+    apiClient.post<LoginResponse>("/auth/google", payload).then((r) => r.data),
   forgotPassword: (payload: ForgotPasswordPayload) =>
     apiClient.post<void>("/auth/forgot-password", payload).then((r) => r.data),
   resetPassword: (payload: ResetPasswordPayload) =>

@@ -45,6 +45,20 @@ public class User {
     @Builder.Default
     private boolean emailVerified = false;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
+    @Column(name = "two_factor_enabled", nullable = false)
+    @Builder.Default
+    private boolean twoFactorEnabled = false;
+
+    @Column(name = "two_factor_secret", length = 255)
+    private String twoFactorSecret;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

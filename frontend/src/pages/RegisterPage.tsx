@@ -73,7 +73,7 @@ export function RegisterPage() {
     setServerError(null);
     try {
       const values = getValues();
-      const user = await loginWithGoogle({
+      const result = await loginWithGoogle({
         idToken: credentialResponse.credential,
         role: values.role,
         displayName: values.displayName,
@@ -81,7 +81,11 @@ export function RegisterPage() {
         contactPersonName: values.contactPersonName,
         mobileNumber: values.mobileNumber,
       });
-      goToDestination(user);
+      if (result.status === "twoFactorRequired") {
+        setServerError("This account has two-factor authentication enabled. Please sign in from the Sign in page.");
+      } else {
+        goToDestination(result.user);
+      }
     } catch (err) {
       setServerError(extractErrorMessage(err, "Could not sign in with Google"));
     }

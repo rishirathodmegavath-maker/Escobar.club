@@ -17,15 +17,35 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+const twoFactorSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+});
+type TwoFactorFormValues = z.infer<typeof twoFactorSchema>;
+
+const otpEmailSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
+type OtpEmailFormValues = z.infer<typeof otpEmailSchema>;
+
+const otpCodeSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+});
+type OtpCodeFormValues = z.infer<typeof otpCodeSchema>;
+
 const UNVERIFIED_MESSAGE = "Please verify your email before signing in";
 
+type OtpStep = "idle" | "email" | "code";
+
 export function LoginPage() {
-  const { login, loginWithGoogle, resendVerification } = useAuth();
+  const { login, verifyTwoFactor, requestOtp, loginWithOtp, loginWithGoogle, resendVerification } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [otpStep, setOtpStep] = useState<OtpStep>("idle");
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -34,9 +54,34 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  const {
+    register: registerCode,
+    handleSubmit: handleCodeSubmit,
+    formState: { errors: codeErrors, isSubmitting: isVerifyingCode },
+  } = useForm<TwoFactorFormValues>({ resolver: zodResolver(twoFactorSchema) });
+
+  const {
+    register: registerOtpEmail,
+    handleSubmit: handleOtpEmailSubmit,
+    formState: { errors: otpEmailErrors, isSubmitting: isSendingOtp },
+  } = useForm<OtpEmailFormValues>({ resolver: zodResolver(otpEmailSchema) });
+
+  const {
+    register: registerOtpCode,
+    handleSubmit: handleOtpCodeSubmit,
+    formState: { errors: otpCodeErrors, isSubmitting: isVerifyingOtp },
+  } = useForm<OtpCodeFormValues>({ resolver: zodResolver(otpCodeSchema) });
+
   const goToDestination = (user: { role: string }) => {
     const from = (location.state as { from?: Location })?.from?.pathname;
     navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
+  };
+
+  const resetToPasswordMode = () => {
+    setChallengeToken(null);
+    setOtpStep("idle");
+    setOtpEmail(null);
+    setServerError(null);
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -44,12 +89,54 @@ export function LoginPage() {
     setShowResend(false);
     setResendState("idle");
     try {
-      const user = await login(values);
-      goToDestination(user);
+      const result = await login(values);
+      if (result.status === "twoFactorRequired") {
+        setChallengeToken(result.challengeToken);
+      } else {
+        goToDestination(result.user);
+      }
     } catch (err) {
       const message = extractErrorMessage(err, "Invalid email or password");
       setServerError(message);
       setShowResend(axios.isAxiosError(err) && err.response?.status === 403 && message === UNVERIFIED_MESSAGE);
+    }
+  };
+
+  const onSubmitCode = async (values: TwoFactorFormValues) => {
+    if (!challengeToken) return;
+    setServerError(null);
+    try {
+      const user = await verifyTwoFactor({ challengeToken, code: values.code });
+      goToDestination(user);
+    } catch (err) {
+      setServerError(extractErrorMessage(err, "Invalid or expired code"));
+    }
+  };
+
+  const onRequestOtp = async (values: OtpEmailFormValues) => {
+    setServerError(null);
+    try {
+      await requestOtp({ email: values.email });
+      setOtpEmail(values.email);
+      setOtpStep("code");
+    } catch (err) {
+      setServerError(extractErrorMessage(err, "Could not send a code. Please try again."));
+    }
+  };
+
+  const onVerifyOtp = async (values: OtpCodeFormValues) => {
+    if (!otpEmail) return;
+    setServerError(null);
+    try {
+      const result = await loginWithOtp({ email: otpEmail, code: values.code });
+      if (result.status === "twoFactorRequired") {
+        setOtpStep("idle");
+        setChallengeToken(result.challengeToken);
+      } else {
+        goToDestination(result.user);
+      }
+    } catch (err) {
+      setServerError(extractErrorMessage(err, "Invalid or expired code"));
     }
   };
 
@@ -66,12 +153,32 @@ export function LoginPage() {
     if (!credentialResponse.credential) return;
     setServerError(null);
     try {
-      const user = await loginWithGoogle({ idToken: credentialResponse.credential });
-      goToDestination(user);
+      const result = await loginWithGoogle({ idToken: credentialResponse.credential });
+      if (result.status === "twoFactorRequired") {
+        setChallengeToken(result.challengeToken);
+      } else {
+        goToDestination(result.user);
+      }
     } catch (err) {
       setServerError(extractErrorMessage(err, "Could not sign in with Google"));
     }
   };
+
+  const heading = challengeToken
+    ? "Two-factor verification"
+    : otpStep === "email"
+      ? "Sign in with a code"
+      : otpStep === "code"
+        ? "Enter your code"
+        : "Welcome back";
+
+  const subheading = challengeToken
+    ? "Enter the 6-digit code from your authenticator app"
+    : otpStep === "email"
+      ? "We'll email you a one-time sign-in code"
+      : otpStep === "code"
+        ? `We sent a 6-digit code to ${otpEmail}`
+        : "Sign in to manage partnerships on Escobar.Club";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-paper px-4">
@@ -92,53 +199,140 @@ export function LoginPage() {
               <path d="M9 16H16.5" stroke="#2FBE9A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 className="font-display text-2xl font-semibold text-ink-900">Welcome back</h1>
-          <p className="mt-1 text-sm text-ink-400">Sign in to manage partnerships on Escobar.Club</p>
+          <h1 className="font-display text-2xl font-semibold text-ink-900">{heading}</h1>
+          <p className="mt-1 text-sm text-ink-400">{subheading}</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="card-surface flex flex-col gap-4 p-7">
-          {serverError && (
-            <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
-              <p>{serverError}</p>
-              {showResend && (
-                <p className="mt-1">
-                  {resendState === "sent" ? (
-                    "If that account needs verifying, we've sent a new link."
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={onResendVerification}
-                      disabled={resendState === "sending"}
-                      className="font-medium underline disabled:opacity-50"
-                    >
-                      Resend verification email
-                    </button>
-                  )}
-                </p>
-              )}
+        {challengeToken ? (
+          <form onSubmit={handleCodeSubmit(onSubmitCode)} className="card-surface flex flex-col gap-4 p-7">
+            {serverError && (
+              <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                <p>{serverError}</p>
+              </div>
+            )}
+            <Input
+              label="6-digit code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="123456"
+              error={codeErrors.code?.message}
+              {...registerCode("code")}
+            />
+            <Button type="submit" isLoading={isVerifyingCode} className="mt-2 w-full">
+              Verify and sign in
+            </Button>
+            <button type="button" onClick={resetToPasswordMode} className="text-center text-xs font-medium text-signal-600 hover:text-signal-700">
+              Back to sign in
+            </button>
+          </form>
+        ) : otpStep === "email" ? (
+          <form onSubmit={handleOtpEmailSubmit(onRequestOtp)} className="card-surface flex flex-col gap-4 p-7">
+            {serverError && (
+              <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                <p>{serverError}</p>
+              </div>
+            )}
+            <Input
+              label="Email"
+              type="email"
+              placeholder="you@company.com"
+              error={otpEmailErrors.email?.message}
+              {...registerOtpEmail("email")}
+            />
+            <Button type="submit" isLoading={isSendingOtp} className="mt-2 w-full">
+              Send code
+            </Button>
+            <button type="button" onClick={resetToPasswordMode} className="text-center text-xs font-medium text-signal-600 hover:text-signal-700">
+              Back to sign in
+            </button>
+          </form>
+        ) : otpStep === "code" ? (
+          <form onSubmit={handleOtpCodeSubmit(onVerifyOtp)} className="card-surface flex flex-col gap-4 p-7">
+            {serverError && (
+              <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                <p>{serverError}</p>
+              </div>
+            )}
+            <Input
+              label="6-digit code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="123456"
+              error={otpCodeErrors.code?.message}
+              {...registerOtpCode("code")}
+            />
+            <Button type="submit" isLoading={isVerifyingOtp} className="mt-2 w-full">
+              Sign in
+            </Button>
+            <button
+              type="button"
+              onClick={() => otpEmail && onRequestOtp({ email: otpEmail })}
+              className="text-center text-xs font-medium text-signal-600 hover:text-signal-700"
+            >
+              Resend code
+            </button>
+            <button type="button" onClick={resetToPasswordMode} className="text-center text-xs font-medium text-ink-400 hover:text-ink-600">
+              Back to sign in
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="card-surface flex flex-col gap-4 p-7">
+            {serverError && (
+              <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                <p>{serverError}</p>
+                {showResend && (
+                  <p className="mt-1">
+                    {resendState === "sent" ? (
+                      "If that account needs verifying, we've sent a new link."
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onResendVerification}
+                        disabled={resendState === "sending"}
+                        className="font-medium underline disabled:opacity-50"
+                      >
+                        Resend verification email
+                      </button>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+            <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
+            <div className="flex flex-col gap-1.5">
+              <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
+              <Link to="/forgot-password" className="self-end text-xs font-medium text-signal-600 hover:text-signal-700">
+                Forgot password?
+              </Link>
             </div>
-          )}
-          <Input label="Email" type="email" placeholder="you@company.com" error={errors.email?.message} {...register("email")} />
-          <div className="flex flex-col gap-1.5">
-            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
-            <Link to="/forgot-password" className="self-end text-xs font-medium text-signal-600 hover:text-signal-700">
-              Forgot password?
-            </Link>
-          </div>
-          <Button type="submit" isLoading={isSubmitting} className="mt-2 w-full">
-            Sign in
-          </Button>
+            <Button type="submit" isLoading={isSubmitting} className="mt-2 w-full">
+              Sign in
+            </Button>
 
-          <div className="flex items-center gap-3 text-xs text-ink-300">
-            <span className="h-px flex-1 bg-ink-100" />
-            OR
-            <span className="h-px flex-1 bg-ink-100" />
-          </div>
+            <button
+              type="button"
+              onClick={() => {
+                setServerError(null);
+                setOtpStep("email");
+              }}
+              className="text-center text-xs font-medium text-signal-600 hover:text-signal-700"
+            >
+              Sign in with an emailed code instead
+            </button>
 
-          <div className="flex justify-center">
-            <GoogleLogin onSuccess={onGoogleSuccess} onError={() => setServerError("Could not sign in with Google")} />
-          </div>
-        </form>
+            <div className="flex items-center gap-3 text-xs text-ink-300">
+              <span className="h-px flex-1 bg-ink-100" />
+              OR
+              <span className="h-px flex-1 bg-ink-100" />
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin onSuccess={onGoogleSuccess} onError={() => setServerError("Could not sign in with Google")} />
+            </div>
+          </form>
+        )}
 
         <p className="mt-6 text-center text-sm text-ink-400">
           New to Escobar.Club?{" "}

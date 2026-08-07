@@ -2,6 +2,7 @@ package club.escobar.controller;
 
 import club.escobar.dto.auth.AuthResponse;
 import club.escobar.dto.auth.LoginRequest;
+import club.escobar.dto.auth.LoginResponse;
 import club.escobar.dto.auth.RegisterRequest;
 import club.escobar.dto.auth.RegisterResponse;
 import club.escobar.dto.auth.UserSummaryResponse;
@@ -64,14 +65,14 @@ class AuthControllerTest {
 
     @Test
     void login_returns200WithTokens() throws Exception {
-        var response = new AuthResponse("access-token", "refresh-token",
-                new UserSummaryResponse(2L, "biz@test.com", UserRole.BUSINESS, true));
-        when(authService.login(any())).thenReturn(response);
+        var auth = new AuthResponse("access-token", "refresh-token", 1L,
+                new UserSummaryResponse(2L, "biz@test.com", UserRole.BUSINESS, true, false));
+        when(authService.login(any(), any(), any())).thenReturn(LoginResponse.success(auth));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("biz@test.com", "password123"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.role").value("BUSINESS"));
+                .andExpect(jsonPath("$.auth.user.role").value("BUSINESS"));
     }
 }
