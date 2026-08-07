@@ -94,9 +94,47 @@ export default {
           "0%": { opacity: 0, transform: "translateY(4px)" },
           "100%": { opacity: 1, transform: "translateY(0)" },
         },
+        "signal-ignite": {
+          "0%": { transform: "scale(0)", opacity: 0 },
+          "60%": { transform: "scale(1.08)", opacity: 1 },
+          "100%": { transform: "scale(1)", opacity: 1 },
+        },
+        "signal-ring": {
+          "0%": { transform: "scale(0.4)", opacity: 0.5 },
+          "70%": { opacity: 0.12 },
+          "100%": { transform: "scale(1)", opacity: 0 },
+        },
+        "signal-chime": {
+          "0%": { transform: "scale(0.5)", opacity: 0 },
+          "15%": { opacity: 0.9 },
+          "100%": { transform: "scale(1.2)", opacity: 0 },
+        },
+        "wordmark-in": {
+          "0%": { opacity: 0, transform: "translateX(-6px)" },
+          "100%": { opacity: 1, transform: "translateX(0)" },
+        },
+        "lockup-settle": {
+          "0%": { transform: "scale(1)" },
+          "100%": { transform: "scale(0.8)" },
+        },
+        "splash-in": {
+          "0%": { opacity: 0 },
+          "100%": { opacity: 1 },
+        },
+        "splash-out": {
+          "0%": { opacity: 1, transform: "scale(1)" },
+          "100%": { opacity: 0, transform: "scale(1.04)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.25s ease-out",
+        "signal-ignite": "signal-ignite 0.8s cubic-bezier(0.34,1.56,0.64,1) both",
+        "signal-ring": "signal-ring 2.8s cubic-bezier(0.16,1,0.3,1) infinite",
+        "signal-chime": "signal-chime 0.8s cubic-bezier(0.16,1,0.3,1) both",
+        "wordmark-in": "wordmark-in 0.9s cubic-bezier(0.16,1,0.3,1) both",
+        "lockup-settle": "lockup-settle 0.8s cubic-bezier(0.65,0,0.35,1) both",
+        "splash-in": "splash-in 0.25s ease-out both",
+        "splash-out": "splash-out 0.42s cubic-bezier(0.4,0,1,1) both",
       },
     },
   },

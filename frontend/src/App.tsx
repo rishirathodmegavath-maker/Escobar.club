@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
+import { SplashScreen } from "@/components/SplashScreen";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { useAuth } from "@/auth/AuthContext";
 import { DiscoverCampaignsPage } from "@/pages/DiscoverCampaignsPage";
@@ -18,11 +20,20 @@ import { BusinessProfilePage } from "@/pages/business/BusinessProfilePage";
 import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPage";
 import { BusinessCampaignsPage } from "@/pages/business/BusinessCampaignsPage";
 import { LeaderboardPage } from "@/pages/LeaderboardPage";
+import { SecuritySettingsPage } from "@/pages/SecuritySettingsPage";
+import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
+import { AdminCreatorsPage } from "@/pages/admin/AdminCreatorsPage";
+import { AdminBusinessesPage } from "@/pages/admin/AdminBusinessesPage";
+import { AdminCampaignsPage } from "@/pages/admin/AdminCampaignsPage";
+import { AdminContentPage } from "@/pages/admin/AdminContentPage";
 
 export default function App() {
   const { isReady } = useAuth();
+  const [splashDone, setSplashDone] = useState(false);
 
-  if (!isReady) return null;
+  if (!splashDone) {
+    return <SplashScreen ready={isReady} onDone={() => setSplashDone(true)} />;
+  }
 
   return (
     <Routes>
@@ -129,6 +140,68 @@ export default function App() {
           <ProtectedRoute allowedRoles={["CREATOR", "BUSINESS"]}>
             <AppShell>
               <LeaderboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AppShell>
+              <AdminDashboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/creators"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AppShell>
+              <AdminCreatorsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/businesses"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AppShell>
+              <AdminBusinessesPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/campaigns"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AppShell>
+              <AdminCampaignsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/content"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AppShell>
+              <AdminContentPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/account/security"
+        element={
+          <ProtectedRoute allowedRoles={["CREATOR", "BUSINESS"]}>
+            <AppShell>
+              <SecuritySettingsPage />
             </AppShell>
           </ProtectedRoute>
         }

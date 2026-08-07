@@ -34,6 +34,20 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-signal-ignite,
+  .animate-signal-ring,
+  .animate-signal-chime,
+  .animate-wordmark-in,
+  .animate-lockup-settle,
+  .animate-splash-in,
+  .animate-splash-out {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Thin, editorial scrollbars */
 ::-webkit-scrollbar {
   width: 10px;

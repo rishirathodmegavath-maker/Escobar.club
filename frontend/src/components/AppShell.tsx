@@ -7,7 +7,8 @@ import { businessesApi } from "@/api/businesses";
 import { creatorsApi } from "@/api/creators";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
-import { CompassIcon, ImageStackIcon, UserIcon, LogoutIcon, TrophyIcon, MegaphoneIcon, IdCardIcon } from "./icons";
+import { SignalMark } from "./SignalMark";
+import { CompassIcon, ImageStackIcon, UserIcon, LogoutIcon, TrophyIcon, MegaphoneIcon, IdCardIcon, ShieldIcon, SparkIcon, EyeIcon } from "./icons";
 
 interface NavItem {
   to: string;
@@ -23,6 +24,7 @@ function navItemsForRole(role: string | undefined): NavItem[] {
       { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
       { to: "/business/leaderboard", label: "Leaderboard", icon: TrophyIcon },
       { to: "/business/profile", label: "Company profile", icon: UserIcon },
+      { to: "/account/security", label: "Security", icon: ShieldIcon },
     ];
   }
   if (role === "CREATOR") {
@@ -32,6 +34,16 @@ function navItemsForRole(role: string | undefined): NavItem[] {
       { to: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
       { to: "/creator/kyc", label: "My KYC", icon: IdCardIcon },
       { to: "/creator/profile", label: "My profile", icon: UserIcon },
+      { to: "/account/security", label: "Security", icon: ShieldIcon },
+    ];
+  }
+  if (role === "ADMIN") {
+    return [
+      { to: "/admin", label: "Dashboard", icon: SparkIcon },
+      { to: "/admin/creators", label: "Creators", icon: UserIcon },
+      { to: "/admin/businesses", label: "Brands", icon: MegaphoneIcon },
+      { to: "/admin/campaigns", label: "Campaigns", icon: CompassIcon },
+      { to: "/admin/content", label: "Content & metrics", icon: EyeIcon },
     ];
   }
   return [{ to: "/", label: "Discover", icon: CompassIcon }];
@@ -57,13 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-paper">
       <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-ink-900 px-5 py-6">
-        <div className="mb-8 flex items-center gap-2 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-ink-900">
-            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-              <path d="M9 21.5V10.5H18.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M9 16H16.5" stroke="#2FBE9A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+        <div className="mb-8 flex items-center gap-2.5 px-2">
+          <SignalMark size={30} />
           <span className="font-display text-lg font-semibold tracking-tight text-paper-50">Escobar.Club</span>
         </div>
 
@@ -72,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/"}
+              end={item.to === "/" || item.to === "/admin"}
               className={({ isActive }) =>
                 clsx(
                   "focus-ring flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
