@@ -11,12 +11,15 @@ import club.escobar.entity.Content;
 import club.escobar.entity.ContentReviewNote;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ContentStatus;
+import club.escobar.entity.enums.KycStatus;
+import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.ContentMapper;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
+import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.ContentService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +45,7 @@ public class ContentServiceImpl implements ContentService {
     private final ContentRepository contentRepository;
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
+    private final CreatorKycProfileRepository creatorKycProfileRepository;
     private final ContentMapper contentMapper;
 
     @Override
@@ -51,6 +55,8 @@ public class ContentServiceImpl implements ContentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id " + request.campaignId()));
         User creator = userRepository.findById(creatorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        assertKycAdminVerified(creatorUserId);
 
         if (!campaign.isOpenForSubmissions()) {
             throw new InvalidStateTransitionException(campaign.submissionClosedReason());
@@ -81,6 +87,7 @@ public class ContentServiceImpl implements ContentService {
         if (!content.getCreator().getId().equals(creatorUserId)) {
             throw new ForbiddenActionException("This content does not belong to you");
         }
+        assertKycAdminVerified(creatorUserId);
         if (content.getStatus() != ContentStatus.CHANGES_REQUESTED) {
             throw new InvalidStateTransitionException(
                     "Content can only be resubmitted when changes have been requested (current status: " + content.getStatus() + ")");
@@ -178,6 +185,17 @@ public class ContentServiceImpl implements ContentService {
     @Transactional(readOnly = true)
     public ContentResponse getById(Long contentId) {
         return contentMapper.toResponse(findById(contentId));
+    }
+
+    // Business-side peer review can also mark KYC VERIFIED, but only an admin's sign-off unlocks
+    // content submission platform-wide - see CreatorKycProfileRepository for the same rule applied
+    // to payout eligibility.
+    private void assertKycAdminVerified(Long creatorUserId) {
+        boolean adminVerified = creatorKycProfileRepository
+                .existsByCreator_IdAndStatusAndReviewedBy_Role(creatorUserId, KycStatus.VERIFIED, UserRole.ADMIN);
+        if (!adminVerified) {
+            throw new ForbiddenActionException("Your KYC must be verified by an admin before you can submit content");
+        }
     }
 
     private Content findById(Long contentId) {

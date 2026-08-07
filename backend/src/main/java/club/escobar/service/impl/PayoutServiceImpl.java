@@ -8,6 +8,7 @@ import club.escobar.entity.Payout;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.PayoutStatus;
+import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
@@ -78,9 +79,10 @@ public class PayoutServiceImpl implements PayoutService {
                 payout.setEligibleAt(Instant.now());
             }
 
-            boolean kycVerified = creatorKycProfileRepository.findByCreator_Id(content.getCreator().getId())
-                    .map(k -> k.getStatus() == KycStatus.VERIFIED)
-                    .orElse(false);
+            // Only an admin-verified KYC unlocks payment - a business's own peer review of a
+            // creator's KYC (scoped to their content relationship) is not sufficient on its own.
+            boolean kycVerified = creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(
+                    content.getCreator().getId(), KycStatus.VERIFIED, UserRole.ADMIN);
 
             if (payout.getStatus() != PayoutStatus.PAID) {
                 payout.setStatus(kycVerified ? PayoutStatus.PAYABLE : PayoutStatus.PENDING_KYC);

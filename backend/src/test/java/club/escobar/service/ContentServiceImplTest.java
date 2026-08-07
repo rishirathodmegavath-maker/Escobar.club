@@ -10,6 +10,7 @@ import club.escobar.entity.Content;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
+import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.MediaType;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
@@ -17,6 +18,7 @@ import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.mapper.ContentMapper;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
+import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.ContentServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +49,8 @@ class ContentServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private ContentMapper contentMapper;
+    @Mock
+    private CreatorKycProfileRepository creatorKycProfileRepository;
 
     private ContentServiceImpl contentService;
 
@@ -55,7 +60,9 @@ class ContentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository, contentMapper);
+        contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository, creatorKycProfileRepository, contentMapper);
+        lenient().when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(anyLong(), any(), any()))
+                .thenReturn(true);
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).build();
         business = User.builder().id(2L).email("business@test.com").role(UserRole.BUSINESS).build();
         campaign = Campaign.builder()
@@ -98,6 +105,20 @@ class ContentServiceImplTest {
     }
 
     @Test
+    void submit_rejectsWhenCreatorKycNotAdminVerified() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
     void submit_rejectsWhenCampaignNotOpenForSubmissions() {
         campaign.setStatus(CampaignStatus.DRAFT);
         when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
@@ -121,6 +142,21 @@ class ContentServiceImplTest {
         assertThat(content.getVersion()).isEqualTo(2);
         assertThat(content.getStatus()).isEqualTo(ContentStatus.SUBMITTED);
         assertThat(content.getMediaUrl()).isEqualTo("new.png");
+    }
+
+    @Test
+    void resubmit_rejectsWhenCreatorKycNotAdminVerified() {
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.CHANGES_REQUESTED).version(1).build();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.resubmit(1L, 20L,
+                new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
     }
 
     @Test
