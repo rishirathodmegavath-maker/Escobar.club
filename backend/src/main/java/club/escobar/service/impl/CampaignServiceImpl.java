@@ -4,14 +4,17 @@ import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignUpdateRequest;
 import club.escobar.dto.common.PageResponse;
+import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.User;
+import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.CampaignMapper;
+import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.CampaignService;
@@ -43,6 +46,7 @@ public class CampaignServiceImpl implements CampaignService {
 
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
+    private final BusinessProfileRepository businessProfileRepository;
     private final CampaignMapper campaignMapper;
 
     @Override
@@ -55,6 +59,11 @@ public class CampaignServiceImpl implements CampaignService {
         }
         validateDateOrdering(request.submissionOpenAt(), request.submissionDeadline(),
                 request.publishStartAt(), request.publishEndAt());
+        BusinessProfile businessProfile = businessProfileRepository.findByUser_Id(businessUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business profile not found"));
+        if (businessProfile.getApprovalStatus() != ApprovalStatus.APPROVED) {
+            throw new ForbiddenActionException("Your business account must be approved by an admin before you can create campaigns");
+        }
 
         // A newly created campaign is always PUBLISHED (i.e. governed by dates): its phase -
         // Upcoming, Live, or Completed - is computed automatically from the dates the business just
@@ -160,7 +169,8 @@ public class CampaignServiceImpl implements CampaignService {
                 response.businessLogoUrl(), response.title(), response.description(),
                 response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
                 response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
-                response.acceptingSubmissions(), response.urgent(), hot, response.createdAt(), response.updatedAt());
+                response.acceptingSubmissions(), response.urgent(), hot, response.approvalStatus(),
+                response.adminDisplayStatus(), response.createdAt(), response.updatedAt());
     }
 
     // Top-quartile rate among campaigns currently open for creator submissions, used as one of the

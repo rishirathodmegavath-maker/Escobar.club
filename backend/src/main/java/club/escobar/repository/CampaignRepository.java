@@ -1,6 +1,7 @@
 package club.escobar.repository;
 
 import club.escobar.entity.Campaign;
+import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,10 +16,13 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
 
     Page<Campaign> findByBusiness_Id(Long businessId, Pageable pageable);
 
+    long countByApprovalStatus(ApprovalStatus status);
+
     @Query("""
             select c from Campaign c
             where c.status <> club.escobar.entity.enums.CampaignStatus.DRAFT
             and c.status <> club.escobar.entity.enums.CampaignStatus.CANCELLED
+            and c.approvalStatus = club.escobar.entity.enums.ApprovalStatus.APPROVED
             and (:search is null or lower(c.title) like lower(concat('%', :search, '%')))
             """)
     Page<Campaign> searchPublic(@Param("search") String search, Pageable pageable);
@@ -26,9 +30,17 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
     @Query("""
             select c from Campaign c
             where c.status = :status
+            and c.approvalStatus = club.escobar.entity.enums.ApprovalStatus.APPROVED
             and (:search is null or lower(c.title) like lower(concat('%', :search, '%')))
             """)
     Page<Campaign> searchPublicByStatus(@Param("search") String search, @Param("status") CampaignStatus status, Pageable pageable);
+
+    @Query("""
+            select c from Campaign c
+            where (:status is null or c.approvalStatus = :status)
+            and (:search is null or lower(c.title) like lower(concat('%', :search, '%')))
+            """)
+    Page<Campaign> searchForAdmin(@Param("search") String search, @Param("status") ApprovalStatus status, Pageable pageable);
 
     // Rates of campaigns currently open for creator submissions, used to compute the "Hot" rate threshold.
     @Query("""

@@ -3,13 +3,16 @@ package club.escobar.service;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignUpdateRequest;
+import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.User;
+import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.mapper.CampaignMapper;
+import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.CampaignServiceImpl;
@@ -37,6 +40,8 @@ class CampaignServiceImplTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private BusinessProfileRepository businessProfileRepository;
+    @Mock
     private CampaignMapper campaignMapper;
 
     @InjectMocks
@@ -60,6 +65,8 @@ class CampaignServiceImplTest {
     @Test
     void create_alwaysPersistsAsPublished_lettingDatesDriveThePhase() {
         when(userRepository.findById(2L)).thenReturn(Optional.of(business));
+        when(businessProfileRepository.findByUser_Id(2L)).thenReturn(Optional.of(
+                BusinessProfile.builder().approvalStatus(ApprovalStatus.APPROVED).build()));
         when(campaignRepository.save(any(Campaign.class))).thenAnswer(inv -> inv.getArgument(0));
         when(campaignMapper.toResponse(any(Campaign.class))).thenReturn(mock(CampaignResponse.class));
 

@@ -14,17 +14,46 @@ export type KycStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
 export type PayoutStatus = "BELOW_THRESHOLD" | "PENDING_KYC" | "PAYABLE" | "PAID";
 
+export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+// Admin-curated label shown to creators, independent of the auto-computed CampaignStatus above.
+export type CampaignDisplayStatus = "UPCOMING" | "LIVE" | "HOT" | "CLOSED";
+
 export interface UserSummary {
   id: number;
   email: string;
   role: UserRole;
   hasPassword: boolean;
+  twoFactorEnabled: boolean;
 }
 
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  sessionId: number;
   user: UserSummary;
+}
+
+export interface LoginResponse {
+  requiresTwoFactor: boolean;
+  challengeToken: string | null;
+  auth: AuthResponse | null;
+}
+
+export type LoginResult = { status: "success"; user: UserSummary } | { status: "twoFactorRequired"; challengeToken: string };
+
+export interface TwoFactorSetupResponse {
+  secret: string;
+  otpauthUri: string;
+}
+
+export interface SessionSummary {
+  id: number;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string;
 }
 
 export interface CreatorProfile {
@@ -72,6 +101,8 @@ export interface Campaign {
   acceptingSubmissions: boolean;
   urgent: boolean;
   hot: boolean;
+  approvalStatus: ApprovalStatus;
+  adminDisplayStatus: CampaignDisplayStatus | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -171,6 +202,60 @@ export interface PageResponse<T> {
   totalElements: number;
   totalPages: number;
   last: boolean;
+}
+
+export interface AdminDashboardSummary {
+  totalBrands: number;
+  totalCreators: number;
+  totalCampaigns: number;
+  pendingCampaignApprovals: number;
+  pendingCreatorKyc: number;
+}
+
+export interface AdminCreatorSummary {
+  userId: number;
+  email: string;
+  displayName: string | null;
+  active: boolean;
+  kycStatus: KycStatus | null;
+  createdAt: string;
+}
+
+export interface AdminBusinessSummary {
+  userId: number;
+  email: string;
+  companyName: string;
+  gstNumber: string;
+  contactPersonName: string;
+  approvalStatus: ApprovalStatus;
+  createdAt: string;
+}
+
+export interface AdminCampaignSummary {
+  id: number;
+  title: string;
+  businessCompanyName: string | null;
+  status: CampaignStatus;
+  approvalStatus: ApprovalStatus;
+  adminDisplayStatus: CampaignDisplayStatus | null;
+  publishStartAt: string;
+  publishEndAt: string;
+  createdAt: string;
+}
+
+export interface AdminContentSummary {
+  id: number;
+  creatorDisplayName: string | null;
+  creatorEmail: string;
+  businessCompanyName: string | null;
+  campaignTitle: string;
+  status: ContentStatus;
+  postUrl: string | null;
+  publishedAt: string | null;
+  likeCount: number | null;
+  commentCount: number | null;
+  viewCount: number | null;
+  metricsLastSyncedAt: string | null;
 }
 
 export interface ApiErrorShape {

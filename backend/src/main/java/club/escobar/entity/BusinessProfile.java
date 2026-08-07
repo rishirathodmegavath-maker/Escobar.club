@@ -1,5 +1,6 @@
 package club.escobar.entity;
 
+import club.escobar.entity.enums.ApprovalStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,7 +31,7 @@ public class BusinessProfile {
     @Column(name = "company_name", nullable = false, length = 150)
     private String companyName;
 
-    @Column(name = "gst_number", nullable = false, length = 20)
+    @Column(name = "gst_number", unique = true, length = 20)
     private String gstNumber;
 
     @Column(name = "contact_person_name", nullable = false, length = 150)
@@ -50,6 +51,11 @@ public class BusinessProfile {
 
     @Column(length = 300)
     private String website;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20)
+    @Builder.Default
+    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

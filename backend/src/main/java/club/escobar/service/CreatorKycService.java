@@ -14,4 +14,6 @@ public interface CreatorKycService {
     CreatorKycReviewDetailResponse getForReview(Long businessUserId, Long creatorUserId);
 
     CreatorKycReviewDetailResponse review(Long businessUserId, Long creatorUserId, CreatorKycReviewRequest request);
+
+    CreatorKycReviewDetailResponse adminReview(Long adminUserId, Long creatorUserId, CreatorKycReviewRequest request);
 }

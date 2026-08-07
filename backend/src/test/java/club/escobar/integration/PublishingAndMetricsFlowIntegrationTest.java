@@ -2,6 +2,7 @@ package club.escobar.integration;
 
 import club.escobar.dto.auth.AuthResponse;
 import club.escobar.dto.auth.LoginRequest;
+import club.escobar.dto.auth.LoginResponse;
 import club.escobar.dto.auth.RegisterRequest;
 import club.escobar.dto.auth.RegisterResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
@@ -14,11 +15,13 @@ import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.metrics.ContentMetricsSnapshotResponse;
 import club.escobar.dto.metrics.LeaderboardEntryResponse;
 import club.escobar.entity.User;
+import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.MediaType;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.integration.apify.ApifyInstagramClient;
 import club.escobar.integration.apify.ApifyPostMetrics;
+import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +51,9 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BusinessProfileRepository businessProfileRepository;
+
     private final TestRestTemplate rest = new TestRestTemplate();
 
     private String baseUrl() {
@@ -57,7 +63,7 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
     private AuthResponse registerAndLogin(String email, UserRole role, String displayName) {
         var registerResponse = rest.postForEntity(baseUrl() + "/api/auth/register",
                 new RegisterRequest(email, "password123", role, displayName,
-                        "22AAAAA0000A1Z5", "Contact Person", "9876543210"),
+                        uniqueGstNumber(email), "Contact Person", "9876543210"),
                 RegisterResponse.class);
         assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
@@ -65,11 +71,26 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
         user.setEmailVerified(true);
         userRepository.save(user);
 
+        // Newly-registered businesses start PENDING admin approval; grandfather them here so existing
+        // test flows that create/publish campaigns don't need to simulate the admin-approval step.
+        if (role == UserRole.BUSINESS) {
+            businessProfileRepository.findByUser_Id(user.getId()).ifPresent(profile -> {
+                profile.setApprovalStatus(ApprovalStatus.APPROVED);
+                businessProfileRepository.save(profile);
+            });
+        }
+
         var loginResponse = rest.postForEntity(baseUrl() + "/api/auth/login",
                 new LoginRequest(email, "password123"),
-                AuthResponse.class);
+                LoginResponse.class);
         assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return loginResponse.getBody();
+        return loginResponse.getBody().auth();
+    }
+
+    // GST numbers are now unique per business account; derive a distinct-but-valid-looking one per email
+    // instead of reusing the same literal across every registration in this test class.
+    private String uniqueGstNumber(String email) {
+        return "22AAAAA" + String.format("%04d", Math.abs(email.hashCode()) % 10000) + "A1Z5";
     }
 
     private HttpHeaders authHeaders(String accessToken) {

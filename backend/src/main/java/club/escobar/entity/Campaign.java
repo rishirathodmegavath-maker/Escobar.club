@@ -1,5 +1,7 @@
 package club.escobar.entity;
 
+import club.escobar.entity.enums.ApprovalStatus;
+import club.escobar.entity.enums.CampaignDisplayStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -68,6 +70,19 @@ public class Campaign {
     @Column(nullable = false)
     @Builder.Default
     private boolean urgent = false;
+
+    // Platform-moderation gate: only APPROVED campaigns are ever visible to creators, regardless of
+    // status above. Independent of the business's own DRAFT/PUBLISHED/CANCELLED choice.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20)
+    @Builder.Default
+    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
+
+    // Admin-curated label shown to creators once approved (Upcoming/Live/Hot/Closed). Null until an
+    // admin sets one; frontend falls back to getEffectiveStatus()/isHot() in that case.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "admin_display_status", length = 20)
+    private CampaignDisplayStatus adminDisplayStatus;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

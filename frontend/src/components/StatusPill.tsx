@@ -1,7 +1,7 @@
 import clsx from "clsx";
-import type { CampaignStatus, ContentStatus, KycStatus, PayoutStatus } from "@/types";
+import type { ApprovalStatus, CampaignDisplayStatus, CampaignStatus, ContentStatus, KycStatus, PayoutStatus } from "@/types";
 
-type Status = ContentStatus | CampaignStatus | KycStatus | PayoutStatus;
+type Status = ContentStatus | CampaignStatus | KycStatus | PayoutStatus | ApprovalStatus | CampaignDisplayStatus;
 
 // Note: PUBLISHED is shared between ContentStatus (a piece of content is live) and CampaignStatus
 // (internal "governed by dates" sentinel that's never actually sent to the client - see
@@ -23,6 +23,8 @@ const styles: Record<Status, string> = {
   PENDING_KYC: "bg-gold-soft text-gold-deep",
   PAYABLE: "bg-signal-soft text-signal-deep",
   PAID: "bg-signal-soft text-signal-deep",
+  HOT: "bg-danger-soft text-danger-deep",
+  CLOSED: "bg-ink-100 text-ink-500",
 };
 
 const labels: Record<Status, string> = {
@@ -42,6 +44,8 @@ const labels: Record<Status, string> = {
   PENDING_KYC: "Awaiting KYC",
   PAYABLE: "Payable",
   PAID: "Paid",
+  HOT: "Hot",
+  CLOSED: "Closed",
 };
 
 const dotStyles: Record<Status, string> = {
@@ -61,6 +65,8 @@ const dotStyles: Record<Status, string> = {
   PENDING_KYC: "bg-gold-500",
   PAYABLE: "bg-signal-500",
   PAID: "bg-signal-500",
+  HOT: "bg-danger-500",
+  CLOSED: "bg-ink-300",
 };
 
 export function StatusPill({ status, className }: { status: Status; className?: string }) {

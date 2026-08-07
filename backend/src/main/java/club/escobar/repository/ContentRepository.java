@@ -16,6 +16,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByCreator_Id(Long creatorId, Pageable pageable);
 
+    Page<Content> findByStatus(ContentStatus status, Pageable pageable);
+
     boolean existsByCreator_IdAndBusiness_Id(Long creatorId, Long businessId);
 
     // Ranks creators by the view count of the LATEST metrics snapshot per published content item

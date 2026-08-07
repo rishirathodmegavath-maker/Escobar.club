@@ -4,6 +4,8 @@ import club.escobar.dto.business.BusinessProfileResponse;
 import club.escobar.dto.business.BusinessProfileUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.entity.BusinessProfile;
+import club.escobar.entity.enums.ApprovalStatus;
+import club.escobar.exception.DuplicateResourceException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.BusinessProfileMapper;
 import club.escobar.repository.BusinessProfileRepository;
@@ -42,7 +44,11 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
     @Override
     @Transactional(readOnly = true)
     public BusinessProfileResponse getById(Long id) {
-        return businessProfileMapper.toResponse(findById(id));
+        BusinessProfile profile = findById(id);
+        if (profile.getApprovalStatus() != ApprovalStatus.APPROVED) {
+            throw new ResourceNotFoundException("Business profile not found with id " + id);
+        }
+        return businessProfileMapper.toResponse(profile);
     }
 
     @Override
@@ -58,6 +64,11 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
     public BusinessProfileResponse updateOwnProfile(Long userId, BusinessProfileUpdateRequest request) {
         BusinessProfile profile = businessProfileRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business profile not found for user id " + userId));
+
+        if (!request.gstNumber().equals(profile.getGstNumber())
+                && businessProfileRepository.existsByGstNumberAndUser_IdNot(request.gstNumber(), userId)) {
+            throw new DuplicateResourceException("This GST number is already registered to another business");
+        }
 
         profile.setCompanyName(request.companyName());
         profile.setGstNumber(request.gstNumber());

@@ -27,12 +27,18 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {campaign.hot && (
-            <span className="rounded-full bg-alert-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-alert-deep">
-              🔥 Hot
-            </span>
+          {campaign.adminDisplayStatus ? (
+            <StatusPill status={campaign.adminDisplayStatus} />
+          ) : (
+            <>
+              {campaign.hot && (
+                <span className="rounded-full bg-alert-soft px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-alert-deep">
+                  🔥 Hot
+                </span>
+              )}
+              <StatusPill status={campaign.status} />
+            </>
           )}
-          <StatusPill status={campaign.status} />
         </div>
       </div>
 

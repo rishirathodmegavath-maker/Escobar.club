@@ -97,6 +97,13 @@ export const IdCardIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const ShieldIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+
 export const HelpCircleIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)}>
     <circle cx="12" cy="12" r="9" />
@@ -133,5 +140,11 @@ export const CoinIcon = (props: SVGProps<SVGSVGElement>) => (
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7.5v9" />
     <path d="M14.7 9.8a2.7 2.7 0 0 0-2.5-1.3c-1.5 0-2.7.8-2.7 2s1.2 1.7 2.7 2 2.7.8 2.7 2-1.2 2-2.7 2a2.9 2.9 0 0 1-2.6-1.4" />
+  </svg>
+);
+
+export const ChevronRightIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M9 6l6 6-6 6" />
   </svg>
 );

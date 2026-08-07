@@ -74,7 +74,21 @@ public class CreatorKycServiceImpl implements CreatorKycService {
     @Transactional
     public CreatorKycReviewDetailResponse review(Long businessUserId, Long creatorUserId, CreatorKycReviewRequest request) {
         assertReviewable(businessUserId, creatorUserId);
+        CreatorKycProfile saved = applyReview(businessUserId, creatorUserId, request);
+        log.info("Business id={} reviewed KYC for creator id={}: {}", businessUserId, creatorUserId, request.status());
+        return creatorKycMapper.toReviewDetailResponse(saved);
+    }
 
+    @Override
+    @Transactional
+    public CreatorKycReviewDetailResponse adminReview(Long adminUserId, Long creatorUserId, CreatorKycReviewRequest request) {
+        // Platform admins review globally - no business-content relationship required, unlike review().
+        CreatorKycProfile saved = applyReview(adminUserId, creatorUserId, request);
+        log.info("Admin id={} reviewed KYC for creator id={}: {}", adminUserId, creatorUserId, request.status());
+        return creatorKycMapper.toReviewDetailResponse(saved);
+    }
+
+    private CreatorKycProfile applyReview(Long reviewerUserId, Long creatorUserId, CreatorKycReviewRequest request) {
         CreatorKycProfile profile = findByCreatorId(creatorUserId);
         if (profile.getStatus() != KycStatus.PENDING) {
             throw new InvalidStateTransitionException(
@@ -85,13 +99,11 @@ public class CreatorKycServiceImpl implements CreatorKycService {
         }
 
         profile.setStatus(request.status());
-        profile.setReviewedBy(userRepository.getReferenceById(businessUserId));
+        profile.setReviewedBy(userRepository.getReferenceById(reviewerUserId));
         profile.setReviewNote(request.reviewNote());
         profile.setReviewedAt(Instant.now());
 
-        CreatorKycProfile saved = creatorKycProfileRepository.save(profile);
-        log.info("Business id={} reviewed KYC for creator id={}: {}", businessUserId, creatorUserId, request.status());
-        return creatorKycMapper.toReviewDetailResponse(saved);
+        return creatorKycProfileRepository.save(profile);
     }
 
     private void assertReviewable(Long businessUserId, Long creatorUserId) {

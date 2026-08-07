@@ -1,5 +1,7 @@
 package club.escobar.dto.campaign;
 
+import club.escobar.entity.enums.ApprovalStatus;
+import club.escobar.entity.enums.CampaignDisplayStatus;
 import club.escobar.entity.enums.CampaignStatus;
 
 import java.math.BigDecimal;
@@ -22,6 +24,8 @@ public record CampaignResponse(
         boolean acceptingSubmissions,
         boolean urgent,
         boolean hot,
+        ApprovalStatus approvalStatus,
+        CampaignDisplayStatus adminDisplayStatus,
         Instant createdAt,
         Instant updatedAt
 ) {
