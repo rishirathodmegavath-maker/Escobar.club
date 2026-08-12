@@ -1,5 +1,6 @@
-import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useState, type InputHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import clsx from "clsx";
+import { EyeIcon, EyeOffIcon } from "./icons";
 
 interface FieldWrapperProps {
   label?: string;
@@ -28,15 +29,41 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, hint, className, ...props }, ref) => (
-  <FieldWrapper label={label} error={error} hint={hint}>
-    <input
-      ref={ref}
-      className={clsx(baseInputClasses, error && "border-danger-300 focus-visible:ring-danger-300", className)}
-      {...props}
-    />
-  </FieldWrapper>
-));
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, hint, className, type, ...props }, ref) => {
+  const [reveal, setReveal] = useState(false);
+  const isPassword = type === "password";
+
+  return (
+    <FieldWrapper label={label} error={error} hint={hint}>
+      {isPassword ? (
+        <div className="relative">
+          <input
+            ref={ref}
+            type={reveal ? "text" : "password"}
+            className={clsx(baseInputClasses, "pr-10", error && "border-danger-300 focus-visible:ring-danger-300", className)}
+            {...props}
+          />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setReveal((v) => !v)}
+            aria-label={reveal ? "Hide password" : "Show password"}
+            className="focus-ring absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:text-ink-600"
+          >
+            {reveal ? <EyeOffIcon width={16} height={16} /> : <EyeIcon width={16} height={16} />}
+          </button>
+        </div>
+      ) : (
+        <input
+          ref={ref}
+          type={type}
+          className={clsx(baseInputClasses, error && "border-danger-300 focus-visible:ring-danger-300", className)}
+          {...props}
+        />
+      )}
+    </FieldWrapper>
+  );
+});
 Input.displayName = "Input";
 
 interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

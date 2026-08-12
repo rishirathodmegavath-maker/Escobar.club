@@ -135,6 +135,14 @@ export const EyeIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const EyeOffIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.7A10.4 10.4 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a13.6 13.6 0 0 1-3.1 3.9M6.5 7.1C4 8.9 2.5 12 2.5 12s3.5 6.5 9.5 6.5a9.7 9.7 0 0 0 4-.85" />
+    <path d="M9.9 10a3 3 0 0 0 4.15 4.15" />
+  </svg>
+);
+
 export const CoinIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)}>
     <circle cx="12" cy="12" r="9" />
