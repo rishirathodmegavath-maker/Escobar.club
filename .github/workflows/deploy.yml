@@ -21,4 +21,8 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up --build -d
+            # `up -d` only recreates a container when its service definition changes, not
+            # when a bind-mounted file's *content* does - so a Caddyfile-only edit is never
+            # picked up without an explicit restart.
+            docker compose -f docker-compose.prod.yml restart caddy
             docker image prune -f
