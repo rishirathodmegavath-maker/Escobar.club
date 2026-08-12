@@ -129,6 +129,15 @@ public class CampaignServiceImpl implements CampaignService {
                     .filter(categoryFilter)
                     .toList();
             boolean forceHot = "HOT".equalsIgnoreCase(category);
+            if (forceHot) {
+                // Priority campaigns need creators immediately, so the soonest submission deadline
+                // leads; rate is a tiebreaker only, since every Priority campaign already sits in the
+                // top of the rate distribution (that's what makes it Priority in the first place).
+                matches = matches.stream()
+                        .sorted(Comparator.comparing(Campaign::getSubmissionDeadline)
+                                .thenComparing(Campaign::getRatePerThousandViewsInr, Comparator.reverseOrder()))
+                        .toList();
+            }
             return PageResponse.of(paginate(matches, pageable)
                     .map(c -> withHot(campaignMapper.toResponse(c), forceHot || c.isHot(rateThreshold))));
         }

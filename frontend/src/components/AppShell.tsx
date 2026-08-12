@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -22,7 +22,10 @@ import {
   EyeIcon,
   SunIcon,
   MoonIcon,
+  ChevronRightIcon,
 } from "./icons";
+
+const SIDEBAR_COLLAPSED_KEY = "escobar.sidebarCollapsed";
 
 interface NavItem {
   to: string;
@@ -103,6 +106,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const sections = navSectionsForRole(user?.role);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+  }, [collapsed]);
 
   const { data: businessProfile } = useQuery({
     queryKey: ["business", "me"],
@@ -118,44 +126,79 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-paper">
-      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-[#100E0C] px-5 py-6">
-        <div className="mb-8 flex items-center gap-2.5 px-2">
+      <aside
+        className={clsx(
+          "sticky top-0 flex h-screen shrink-0 flex-col border-r border-white/10 bg-[#100E0C] py-6 transition-[width] duration-200",
+          collapsed ? "w-[76px] px-3" : "w-64 px-5",
+        )}
+      >
+        <button
+          type="button"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setCollapsed((c) => !c)}
+          className="focus-ring absolute -right-3 top-8 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#100E0C] text-paper-50/60 shadow-md transition-colors hover:text-paper-50"
+        >
+          <ChevronRightIcon className={clsx("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-180")} />
+        </button>
+
+        <div className={clsx("mb-8 flex items-center px-2", collapsed ? "justify-center" : "gap-2.5")}>
           <SignalMark size={30} />
-          <span className="font-display text-lg font-semibold tracking-tight text-paper-50">Escobar.Club</span>
+          {!collapsed && <span className="font-display text-lg font-semibold tracking-tight text-paper-50">Escobar.Club</span>}
+          {!collapsed && (
+            <button
+              type="button"
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={toggleTheme}
+              className="focus-ring ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+            >
+              {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+
+        {collapsed && (
           <button
             type="button"
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             onClick={toggleTheme}
-            className="focus-ring ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+            className="focus-ring mb-6 flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
           >
             {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
           </button>
-        </div>
+        )}
 
         <nav className="flex flex-1 flex-col gap-1">
           {sections.map((section) => (
             <div key={section.label} className="mb-1">
-              <p className="mb-1.5 mt-3.5 px-3 text-[10.5px] font-bold uppercase tracking-wide text-paper-50/35 first:mt-0">
-                {section.label}
-              </p>
+              {collapsed ? (
+                <div className="my-3 border-t border-white/10 first:mt-0" />
+              ) : (
+                <p className="mb-1.5 mt-3.5 px-3 text-[10.5px] font-bold uppercase tracking-wide text-paper-50/35 first:mt-0">
+                  {section.label}
+                </p>
+              )}
               <div className="flex flex-col gap-1">
                 {section.items.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.to === "/" || item.to === "/admin"}
+                    title={collapsed ? item.label : undefined}
                     className={({ isActive }) =>
                       clsx(
-                        "focus-ring flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                        "focus-ring flex items-center rounded-lg border-l-2 py-2.5 text-sm font-medium transition-colors",
+                        collapsed ? "justify-center px-2" : "gap-3 px-3",
                         isActive
                           ? "border-signal-500 bg-white/10 text-paper-50"
                           : "border-transparent text-paper-50/60 hover:bg-white/5 hover:text-paper-50",
                       )
                     }
                   >
-                    <item.icon className="h-[18px] w-[18px]" />
-                    {item.label}
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!collapsed && item.label}
                   </NavLink>
                 ))}
               </div>
@@ -164,14 +207,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         {user ? (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-            <Avatar name={user.email} imageUrl={avatarImageUrl} size={34} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-paper-50">{user.email}</p>
-              <p className="text-[11px] uppercase tracking-wide text-paper-50/50">{user.role.toLowerCase()}</p>
-            </div>
+          <div
+            className={clsx(
+              "mt-4 flex items-center rounded-xl border border-white/10 bg-white/5 py-3",
+              collapsed ? "flex-col gap-2 px-2" : "gap-3 px-3",
+            )}
+          >
+            <Avatar name={user.email} imageUrl={avatarImageUrl} size={collapsed ? 30 : 34} />
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-paper-50">{user.email}</p>
+                <p className="text-[11px] uppercase tracking-wide text-paper-50/50">{user.role.toLowerCase()}</p>
+              </div>
+            )}
             <button
               aria-label="Log out"
+              title="Log out"
               onClick={() => {
                 logout();
                 navigate("/login");
@@ -181,6 +232,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <LogoutIcon className="h-4 w-4" />
             </button>
           </div>
+        ) : collapsed ? (
+          <Link
+            to="/login"
+            title="Sign in"
+            className="focus-ring mt-4 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 py-3 text-paper-50/70 hover:text-paper-50"
+          >
+            <UserIcon className="h-[18px] w-[18px]" />
+          </Link>
         ) : (
           <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
             <p className="px-1 text-xs text-paper-50/60">Sign in to apply, review, and manage partnerships.</p>
