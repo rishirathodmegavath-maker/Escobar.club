@@ -2,6 +2,7 @@ package club.escobar.exception;
 
 import club.escobar.dto.common.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -41,6 +42,13 @@ public class GlobalExceptionHandler {
                 .map(fe -> new ErrorResponse.FieldValidationError(fe.getField(), fe.getDefaultMessage()))
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Validation failed", request, fieldErrors);
+    }
+
+    // @Validated on a controller's @PathVariable/@RequestParam (as opposed to @Valid on a
+    // @RequestBody DTO, which throws MethodArgumentNotValidException above) throws this instead.
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

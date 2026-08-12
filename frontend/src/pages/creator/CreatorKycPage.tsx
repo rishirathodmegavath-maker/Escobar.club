@@ -11,6 +11,11 @@ import { Input } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { FullPageSpinner } from "@/components/Spinner";
 import { KycDocumentUploadField } from "@/features/kyc/KycDocumentUploadField";
+import { DraftRestoreBanner } from "@/components/DraftRestoreBanner";
+import { useDraftAutosave, useDraftRestore } from "@/hooks/useDraftAutosave";
+import { draftsApi } from "@/api/drafts";
+
+const DRAFT_KEY = "creator-kyc";
 
 const schema = z.object({
   panNumber: z
@@ -36,8 +41,12 @@ export function CreatorKycPage() {
     reset,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { documentUrl: "" } });
+
+  const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(DRAFT_KEY);
+  const watchedValues = watch();
+  const draftSaveStatus = useDraftAutosave(DRAFT_KEY, watchedValues, !isLoading && isDirty);
 
   useEffect(() => {
     if (data) {
@@ -54,6 +63,8 @@ export function CreatorKycPage() {
     onSuccess: () => {
       push("KYC submitted for review", "success");
       queryClient.invalidateQueries({ queryKey: ["kyc", "me"] });
+      draftsApi.remove(DRAFT_KEY).catch(() => {});
+      dismissDraft();
     },
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
@@ -68,6 +79,20 @@ export function CreatorKycPage() {
       <p className="mt-1.5 mb-6 text-ink-500">
         Required before you can receive payouts. Submitted once, verified by a brand you work with.
       </p>
+
+      {draft && (
+        <DraftRestoreBanner
+          updatedAt={draft.updatedAt}
+          onRestore={() => {
+            reset(draft.data);
+            dismissDraft();
+          }}
+          onDiscard={() => {
+            draftsApi.remove(DRAFT_KEY).catch(() => {});
+            dismissDraft();
+          }}
+        />
+      )}
 
       {data && (
         <div className="card-surface mb-6 flex items-center gap-3 p-5">
@@ -100,9 +125,13 @@ export function CreatorKycPage() {
           error={errors.documentUrl?.message}
         />
 
-        <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
-          {data ? "Resubmit KYC" : "Submit KYC"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
+            {data ? "Resubmit KYC" : "Submit KYC"}
+          </Button>
+          {draftSaveStatus === "saving" && <span className="text-xs text-ink-400">Saving draft…</span>}
+          {draftSaveStatus === "saved" && <span className="text-xs text-ink-400">Draft saved</span>}
+        </div>
       </form>
     </div>
   );

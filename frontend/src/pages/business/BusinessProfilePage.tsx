@@ -10,6 +10,11 @@ import { Button } from "@/components/Button";
 import { Input, TextArea } from "@/components/Field";
 import { FullPageSpinner } from "@/components/Spinner";
 import { ImageUploadField } from "@/components/ImageUploadField";
+import { DraftRestoreBanner } from "@/components/DraftRestoreBanner";
+import { useDraftAutosave, useDraftRestore } from "@/hooks/useDraftAutosave";
+import { draftsApi } from "@/api/drafts";
+
+const DRAFT_KEY = "business-profile";
 
 const schema = z.object({
   companyName: z.string().min(2).max(150),
@@ -34,8 +39,12 @@ export function BusinessProfilePage() {
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(DRAFT_KEY);
+  const watchedValues = watch();
+  const draftSaveStatus = useDraftAutosave(DRAFT_KEY, watchedValues, !isLoading && isDirty);
 
   useEffect(() => {
     if (data) {
@@ -67,6 +76,8 @@ export function BusinessProfilePage() {
     onSuccess: () => {
       push("Company profile updated", "success");
       queryClient.invalidateQueries({ queryKey: ["business", "me"] });
+      draftsApi.remove(DRAFT_KEY).catch(() => {});
+      dismissDraft();
     },
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
@@ -79,6 +90,20 @@ export function BusinessProfilePage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-semibold text-ink-900">Company profile</h1>
       <p className="mt-1.5 mb-6 text-ink-500">This is your public page — creators will see this before applying.</p>
+
+      {draft && (
+        <DraftRestoreBanner
+          updatedAt={draft.updatedAt}
+          onRestore={() => {
+            reset(draft.data);
+            dismissDraft();
+          }}
+          onDiscard={() => {
+            draftsApi.remove(DRAFT_KEY).catch(() => {});
+            dismissDraft();
+          }}
+        />
+      )}
 
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="card-surface flex flex-col gap-5 p-7">
         <ImageUploadField
@@ -95,9 +120,13 @@ export function BusinessProfilePage() {
         <Input label="Website" placeholder="https://…" error={errors.website?.message} {...register("website")} />
         <TextArea label="Public description" rows={5} error={errors.description?.message} {...register("description")} />
 
-        <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
-          Save changes
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
+            Save changes
+          </Button>
+          {draftSaveStatus === "saving" && <span className="text-xs text-ink-400">Saving draft…</span>}
+          {draftSaveStatus === "saved" && <span className="text-xs text-ink-400">Draft saved</span>}
+        </div>
       </form>
     </div>
   );

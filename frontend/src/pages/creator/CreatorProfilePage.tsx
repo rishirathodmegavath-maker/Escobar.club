@@ -11,6 +11,11 @@ import { Input, TextArea } from "@/components/Field";
 import { FullPageSpinner } from "@/components/Spinner";
 import { TickMeter } from "@/components/TickMeter";
 import { ImageUploadField } from "@/components/ImageUploadField";
+import { DraftRestoreBanner } from "@/components/DraftRestoreBanner";
+import { useDraftAutosave, useDraftRestore } from "@/hooks/useDraftAutosave";
+import { draftsApi } from "@/api/drafts";
+
+const DRAFT_KEY = "creator-profile";
 
 const linkSchema = z.object({ value: z.string().url("Must be a valid URL") });
 const INSTAGRAM_PROFILE_PATTERN = /^https?:\/\/(www\.)?instagram\.com\/.+/;
@@ -38,7 +43,7 @@ export function CreatorProfilePage() {
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -56,6 +61,10 @@ export function CreatorProfilePage() {
   const portfolioFields = useFieldArray({ control, name: "portfolioLinks" });
   const followerCount = watch("followerCount");
   const profilePictureUrl = watch("profilePictureUrl");
+
+  const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(DRAFT_KEY);
+  const watchedValues = watch();
+  const draftSaveStatus = useDraftAutosave(DRAFT_KEY, watchedValues, !isLoading && isDirty);
 
   useEffect(() => {
     if (data) {
@@ -87,6 +96,8 @@ export function CreatorProfilePage() {
     onSuccess: () => {
       push("Profile updated", "success");
       queryClient.invalidateQueries({ queryKey: ["creator", "me"] });
+      draftsApi.remove(DRAFT_KEY).catch(() => {});
+      dismissDraft();
     },
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
@@ -97,6 +108,20 @@ export function CreatorProfilePage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-semibold text-ink-900">My profile</h1>
       <p className="mt-1.5 mb-6 text-ink-500">This is what businesses see when reviewing your content submissions.</p>
+
+      {draft && (
+        <DraftRestoreBanner
+          updatedAt={draft.updatedAt}
+          onRestore={() => {
+            reset(draft.data);
+            dismissDraft();
+          }}
+          onDiscard={() => {
+            draftsApi.remove(DRAFT_KEY).catch(() => {});
+            dismissDraft();
+          }}
+        />
+      )}
 
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="card-surface flex flex-col gap-5 p-7">
         <ImageUploadField
@@ -147,9 +172,13 @@ export function CreatorProfilePage() {
           errors={errors.portfolioLinks}
         />
 
-        <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
-          Save changes
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button type="submit" isLoading={isSubmitting || mutation.isPending} className="self-start">
+            Save changes
+          </Button>
+          {draftSaveStatus === "saving" && <span className="text-xs text-ink-400">Saving draft…</span>}
+          {draftSaveStatus === "saved" && <span className="text-xs text-ink-400">Draft saved</span>}
+        </div>
       </form>
     </div>
   );
