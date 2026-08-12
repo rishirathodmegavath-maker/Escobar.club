@@ -82,7 +82,7 @@ public class ContentController {
 
     @GetMapping("/api/content/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ContentResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(contentService.getById(id));
+    public ResponseEntity<ContentResponse> getById(@AuthenticationPrincipal SecurityUser user, @PathVariable Long id) {
+        return ResponseEntity.ok(contentService.getById(user.getId(), id));
     }
 }

@@ -24,5 +24,5 @@ public interface ContentService {
 
     PageResponse<ContentResponse> listForCreator(Long creatorUserId, Pageable pageable);
 
-    ContentResponse getById(Long contentId);
+    ContentResponse getById(Long requestingUserId, Long contentId);
 }

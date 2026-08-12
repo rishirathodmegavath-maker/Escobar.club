@@ -181,10 +181,19 @@ public class ContentServiceImpl implements ContentService {
         return PageResponse.of(page);
     }
 
+    // Content records aren't public - only the creator who submitted them and the business whose
+    // campaign they belong to may view them (same ownership rule as review/metrics/payout below).
+    // This was previously missing entirely: any authenticated user could fetch any content by id.
     @Override
     @Transactional(readOnly = true)
-    public ContentResponse getById(Long contentId) {
-        return contentMapper.toResponse(findById(contentId));
+    public ContentResponse getById(Long requestingUserId, Long contentId) {
+        Content content = findById(contentId);
+        boolean isCreatorOwner = content.getCreator().getId().equals(requestingUserId);
+        boolean isBusinessOwner = content.getBusiness().getId().equals(requestingUserId);
+        if (!isCreatorOwner && !isBusinessOwner) {
+            throw new ForbiddenActionException("You do not have access to this content");
+        }
+        return contentMapper.toResponse(content);
     }
 
     // Business-side peer review can also mark KYC VERIFIED, but only an admin's sign-off unlocks
