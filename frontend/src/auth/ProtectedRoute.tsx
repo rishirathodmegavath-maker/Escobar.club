@@ -6,16 +6,17 @@ import type { UserRole } from "@/types";
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: UserRole[];
+  loginPath?: string;
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles, loginPath = "/login" }: ProtectedRouteProps) {
   const { user, isReady } = useAuth();
   const location = useLocation();
 
   if (!isReady) return null;
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

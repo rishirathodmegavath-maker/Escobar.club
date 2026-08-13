@@ -21,6 +21,7 @@ import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPag
 import { BusinessCampaignsPage } from "@/pages/business/BusinessCampaignsPage";
 import { LeaderboardPage } from "@/pages/LeaderboardPage";
 import { SecuritySettingsPage } from "@/pages/SecuritySettingsPage";
+import { AdminLoginPage } from "@/pages/admin/AdminLoginPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 import { AdminCreatorsPage } from "@/pages/admin/AdminCreatorsPage";
 import { AdminBusinessesPage } from "@/pages/admin/AdminBusinessesPage";
@@ -44,6 +45,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/help" element={<CreatorHelpPage />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
 
       <Route
         path="/"
@@ -149,7 +151,7 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminDashboardPage />
             </AppShell>
@@ -159,7 +161,7 @@ export default function App() {
       <Route
         path="/admin/creators"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminCreatorsPage />
             </AppShell>
@@ -169,7 +171,7 @@ export default function App() {
       <Route
         path="/admin/businesses"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminBusinessesPage />
             </AppShell>
@@ -179,7 +181,7 @@ export default function App() {
       <Route
         path="/admin/campaigns"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminCampaignsPage />
             </AppShell>
@@ -189,7 +191,7 @@ export default function App() {
       <Route
         path="/admin/content"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminContentPage />
             </AppShell>

@@ -37,8 +37,10 @@ const UNVERIFIED_MESSAGE = "Please verify your email before signing in";
 
 type OtpStep = "idle" | "email" | "code";
 
+const ADMIN_MUST_USE_ADMIN_LOGIN = "Admins must sign in at /admin/login";
+
 export function LoginPage() {
-  const { login, verifyTwoFactor, requestOtp, loginWithOtp, loginWithGoogle, resendVerification } = useAuth();
+  const { login, verifyTwoFactor, requestOtp, loginWithOtp, loginWithGoogle, resendVerification, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -74,6 +76,13 @@ export function LoginPage() {
   } = useForm<OtpCodeFormValues>({ resolver: zodResolver(otpCodeSchema) });
 
   const goToDestination = (user: { role: string }) => {
+    // Admin accounts have their own dedicated sign-in at /admin/login; the public login page
+    // must not double as an entry point for them.
+    if (user.role === "ADMIN") {
+      logout();
+      setServerError(ADMIN_MUST_USE_ADMIN_LOGIN);
+      return;
+    }
     const from = (location.state as { from?: Location })?.from?.pathname;
     navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
   };
