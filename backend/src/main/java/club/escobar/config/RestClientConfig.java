@@ -29,4 +29,11 @@ public class RestClientConfig {
                 .baseUrl("https://api.resend.com")
                 .build();
     }
+
+    @Bean
+    public RestClient zeptoMailRestClient() {
+        return RestClient.builder()
+                .baseUrl("https://api.zeptomail.com")
+                .build();
+    }
 }

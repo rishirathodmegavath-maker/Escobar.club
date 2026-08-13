@@ -1,6 +1,6 @@
 package club.escobar.storage;
 
-import club.escobar.config.R2StorageProperties;
+import club.escobar.config.S3StorageProperties;
 import club.escobar.config.StorageProperties;
 import club.escobar.exception.ApiException;
 import lombok.RequiredArgsConstructor;
@@ -27,16 +27,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Stores uploads in a Cloudflare R2 bucket (S3-compatible API). Activated via {@code app.storage.provider=r2}. */
+/**
+ * Stores uploads in any S3-compatible object store (Hostinger Object Storage, Cloudflare R2,
+ * MinIO, etc.) via a configurable endpoint. Activated via {@code app.storage.provider=s3}.
+ */
 @Service
-@ConditionalOnProperty(prefix = "app.storage", name = "provider", havingValue = "r2")
+@ConditionalOnProperty(prefix = "app.storage", name = "provider", havingValue = "s3")
 @RequiredArgsConstructor
-public class R2StorageService implements StorageService {
+public class S3StorageService implements StorageService {
 
-    private static final Logger log = LoggerFactory.getLogger(R2StorageService.class);
+    private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
 
     private final StorageProperties storageProperties;
-    private final R2StorageProperties r2Properties;
+    private final S3StorageProperties s3Properties;
 
     @Override
     public StoredFile store(MultipartFile file) {
@@ -63,14 +66,14 @@ public class R2StorageService implements StorageService {
         try (InputStream inputStream = file.getInputStream()) {
             client().putObject(
                     PutObjectRequest.builder()
-                            .bucket(r2Properties.bucket())
+                            .bucket(s3Properties.bucket())
                             .key(key)
                             .contentType(contentType)
                             .build(),
                     RequestBody.fromInputStream(inputStream, file.getSize()));
-            log.info("Stored uploaded file at r2://{}/{} ({} bytes, {})", r2Properties.bucket(), key, file.getSize(), contentType);
+            log.info("Stored uploaded file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, file.getSize(), contentType);
 
-            String publicUrl = r2Properties.publicBaseUrl() + "/" + key;
+            String publicUrl = s3Properties.publicBaseUrl() + "/" + key;
             return new StoredFile(publicUrl, contentType, file.getSize());
         } catch (IOException e) {
             log.error("Failed to store uploaded file", e);
@@ -80,10 +83,10 @@ public class R2StorageService implements StorageService {
 
     private S3Client client() {
         return S3Client.builder()
-                .endpointOverride(URI.create("https://" + r2Properties.accountId() + ".r2.cloudflarestorage.com"))
-                .region(Region.of("auto"))
+                .endpointOverride(URI.create(s3Properties.endpoint()))
+                .region(Region.of(s3Properties.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(r2Properties.accessKey(), r2Properties.secretKey())))
+                        AwsBasicCredentials.create(s3Properties.accessKey(), s3Properties.secretKey())))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .build();
     }

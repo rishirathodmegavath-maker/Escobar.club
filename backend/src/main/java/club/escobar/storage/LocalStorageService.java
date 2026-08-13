@@ -19,7 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-/** Used in local dev. Production points {@code app.storage.provider} at {@code r2} instead (see {@link R2StorageService}). */
+/** Used in local dev. Production points {@code app.storage.provider} at {@code s3} instead (see {@link S3StorageService}). */
 @Service
 @ConditionalOnProperty(prefix = "app.storage", name = "provider", havingValue = "local", matchIfMissing = true)
 @RequiredArgsConstructor

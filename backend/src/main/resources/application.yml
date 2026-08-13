@@ -32,12 +32,13 @@ app:
     allowed-image-types: image/png,image/jpeg,image/webp,image/gif
     allowed-video-types: video/mp4,video/quicktime,video/webm
     allowed-document-types: application/pdf
-    r2:
-      account-id: ${R2_ACCOUNT_ID:}
-      bucket: ${R2_BUCKET:}
-      access-key: ${R2_ACCESS_KEY:}
-      secret-key: ${R2_SECRET_KEY:}
-      public-base-url: ${R2_PUBLIC_BASE_URL:}
+    s3:
+      endpoint: ${S3_ENDPOINT:}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      public-base-url: ${S3_PUBLIC_BASE_URL:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   apify:
@@ -58,6 +59,8 @@ app:
     from: ${EMAIL_FROM:Escobar Club <onboarding@resend.dev>}
     resend:
       api-key: ${RESEND_API_KEY:}
+    zeptomail:
+      api-key: ${ZEPTOMAIL_API_KEY:}
   email-verification:
     token-ttl-hours: ${EMAIL_VERIFICATION_TOKEN_TTL_HOURS:48}
     frontend-verify-url-base: ${EMAIL_VERIFICATION_FRONTEND_URL:http://localhost:5173/verify-email}
