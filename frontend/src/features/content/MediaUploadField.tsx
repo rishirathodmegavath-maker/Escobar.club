@@ -59,7 +59,7 @@ export function MediaUploadField({ value, onChange, error }: MediaUploadFieldPro
         ) : (
           <>
             <p className="text-sm font-medium text-ink-600">Click to upload, or drag a file here</p>
-            <p className="text-xs text-ink-400">Images or videos, up to 20MB</p>
+            <p className="text-xs text-ink-400">Images or videos, up to 200MB</p>
           </>
         )}
       </div>

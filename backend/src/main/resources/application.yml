@@ -5,8 +5,8 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   servlet:
     multipart:
-      max-file-size: 25MB
-      max-request-size: 25MB
+      max-file-size: 210MB
+      max-request-size: 210MB
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -28,7 +28,7 @@ app:
     provider: ${STORAGE_PROVIDER:local}
     upload-dir: ${UPLOAD_DIR:./uploads}
     base-url: ${UPLOAD_BASE_URL:/media}
-    max-file-size-bytes: ${UPLOAD_MAX_BYTES:20971520}
+    max-file-size-bytes: ${UPLOAD_MAX_BYTES:209715200}
     allowed-image-types: image/png,image/jpeg,image/webp,image/gif
     allowed-video-types: video/mp4,video/quicktime,video/webm
     allowed-document-types: application/pdf
