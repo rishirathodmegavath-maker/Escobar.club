@@ -61,6 +61,10 @@ app:
       api-key: ${RESEND_API_KEY:}
     zeptomail:
       api-key: ${ZEPTOMAIL_API_KEY:}
+      # Zoho data centers are region-specific (api.zeptomail.com for US, .in for India, .eu
+      # for Europe, etc.) - the account's own SMTP/API tab in the dashboard shows the right
+      # host, it does NOT default to .com for every account.
+      api-url: ${ZEPTOMAIL_API_URL:https://api.zeptomail.in}
   email-verification:
     token-ttl-hours: ${EMAIL_VERIFICATION_TOKEN_TTL_HOURS:48}
     frontend-verify-url-base: ${EMAIL_VERIFICATION_FRONTEND_URL:http://localhost:5173/verify-email}

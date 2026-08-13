@@ -31,9 +31,9 @@ public class RestClientConfig {
     }
 
     @Bean
-    public RestClient zeptoMailRestClient() {
+    public RestClient zeptoMailRestClient(ZeptoMailProperties properties) {
         return RestClient.builder()
-                .baseUrl("https://api.zeptomail.com")
+                .baseUrl(properties.apiUrl())
                 .build();
     }
 }

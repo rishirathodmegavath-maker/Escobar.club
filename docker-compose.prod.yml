@@ -60,6 +60,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-Escobar Club <onboarding@resend.dev>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       ZEPTOMAIL_API_KEY: ${ZEPTOMAIL_API_KEY:-}
+      ZEPTOMAIL_API_URL: ${ZEPTOMAIL_API_URL:-https://api.zeptomail.in}
       EMAIL_VERIFICATION_TOKEN_TTL_HOURS: ${EMAIL_VERIFICATION_TOKEN_TTL_HOURS:-48}
       EMAIL_VERIFICATION_FRONTEND_URL: ${EMAIL_VERIFICATION_FRONTEND_URL:-https://escobar.club/verify-email}
     volumes:
