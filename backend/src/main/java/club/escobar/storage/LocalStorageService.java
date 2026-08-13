@@ -2,6 +2,7 @@ package club.escobar.storage;
 
 import club.escobar.config.StorageProperties;
 import club.escobar.exception.ApiException;
+import club.escobar.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,75 @@ public class LocalStorageService implements StorageService {
 
     @Override
     public StoredFile store(MultipartFile file) {
+        ValidatedUpload validated = validate(file);
+        try {
+            String datePath = LocalDate.now().toString();
+            Path targetDir = Path.of(storageProperties.uploadDir(), datePath);
+            Files.createDirectories(targetDir);
+
+            String filename = UUID.randomUUID() + "." + validated.verified().extension();
+            Path targetPath = targetDir.resolve(filename);
+
+            Files.write(targetPath, validated.bytes());
+            log.info("Stored uploaded file at {} ({} bytes, {})", targetPath, validated.bytes().length, validated.verified().contentType());
+
+            String publicUrl = storageProperties.baseUrl() + "/" + datePath + "/" + filename;
+            return new StoredFile(publicUrl, validated.verified().contentType(), (long) validated.bytes().length);
+        } catch (IOException e) {
+            log.error("Failed to store uploaded file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    @Override
+    public PrivateStoredFile storePrivate(MultipartFile file) {
+        ValidatedUpload validated = validate(file);
+        try {
+            String datePath = LocalDate.now().toString();
+            Path targetDir = Path.of(storageProperties.privateUploadDir(), datePath);
+            Files.createDirectories(targetDir);
+
+            String filename = UUID.randomUUID() + "." + validated.verified().extension();
+            Path targetPath = targetDir.resolve(filename);
+
+            Files.write(targetPath, validated.bytes());
+            log.info("Stored private file at {} ({} bytes, {})", targetPath, validated.bytes().length, validated.verified().contentType());
+
+            String key = datePath + "/" + filename;
+            return new PrivateStoredFile(key, validated.verified().contentType(), (long) validated.bytes().length);
+        } catch (IOException e) {
+            log.error("Failed to store private file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    @Override
+    public StoredFileContent loadPrivate(String key) {
+        if (key == null || key.isBlank()) {
+            throw new ResourceNotFoundException("No document has been uploaded");
+        }
+        Path base = Path.of(storageProperties.privateUploadDir()).toAbsolutePath().normalize();
+        Path target = base.resolve(key).normalize();
+        if (!target.startsWith(base)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Invalid document reference");
+        }
+        if (!Files.exists(target)) {
+            throw new ResourceNotFoundException("Document not found");
+        }
+        try {
+            byte[] bytes = Files.readAllBytes(target);
+            String contentType = UploadValidator.verify(bytes).contentType();
+            return new StoredFileContent(bytes, contentType);
+        } catch (IOException e) {
+            log.error("Failed to read private file {}", target, e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load the document");
+        }
+    }
+
+    private record ValidatedUpload(byte[] bytes, UploadValidator.Verified verified) {
+    }
+
+    private ValidatedUpload validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No file was provided");
         }
@@ -47,24 +117,7 @@ public class LocalStorageService implements StorageService {
 
         UploadValidator.Verified verified = UploadValidator.verify(bytes);
         assertAllowed(verified.contentType());
-
-        try {
-            String datePath = LocalDate.now().toString();
-            Path targetDir = Path.of(storageProperties.uploadDir(), datePath);
-            Files.createDirectories(targetDir);
-
-            String filename = UUID.randomUUID() + "." + verified.extension();
-            Path targetPath = targetDir.resolve(filename);
-
-            Files.write(targetPath, bytes);
-            log.info("Stored uploaded file at {} ({} bytes, {})", targetPath, bytes.length, verified.contentType());
-
-            String publicUrl = storageProperties.baseUrl() + "/" + datePath + "/" + filename;
-            return new StoredFile(publicUrl, verified.contentType(), (long) bytes.length);
-        } catch (IOException e) {
-            log.error("Failed to store uploaded file", e);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
-        }
+        return new ValidatedUpload(bytes, verified);
     }
 
     private void assertAllowed(String contentType) {

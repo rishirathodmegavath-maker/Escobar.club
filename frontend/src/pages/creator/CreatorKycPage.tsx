@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kycApi } from "@/api/kyc";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
@@ -22,11 +23,12 @@ const schema = z.object({
     .string()
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Must be a valid 10-character PAN (e.g. ABCDE1234F)"),
   nameOnPan: z.string().min(2).max(150),
-  documentUrl: z.string().min(1, "Upload your PAN card"),
+  documentKey: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
 export function CreatorKycPage() {
+  const { user } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["kyc", "me"],
     queryFn: kycApi.mine,
@@ -40,9 +42,10 @@ export function CreatorKycPage() {
     handleSubmit,
     reset,
     setValue,
+    setError,
     watch,
     formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { documentUrl: "" } });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { documentKey: "" } });
 
   const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(DRAFT_KEY);
   const watchedValues = watch();
@@ -53,7 +56,7 @@ export function CreatorKycPage() {
       reset({
         panNumber: data.panNumberMasked.startsWith("XXXXXX") ? "" : data.panNumberMasked,
         nameOnPan: data.nameOnPan,
-        documentUrl: data.documentUrl,
+        documentKey: "",
       });
     }
   }, [data, reset]);
@@ -69,7 +72,15 @@ export function CreatorKycPage() {
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
 
-  const documentUrl = watch("documentUrl");
+  const documentKey = watch("documentKey");
+
+  const onSubmit = (values: FormValues) => {
+    if (!values.documentKey && !data?.hasDocument) {
+      setError("documentKey", { message: "Upload your PAN card" });
+      return;
+    }
+    mutation.mutate(values);
+  };
 
   if (isLoading) return <FullPageSpinner />;
 
@@ -109,7 +120,7 @@ export function CreatorKycPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="card-surface flex flex-col gap-5 p-7">
+      <form onSubmit={handleSubmit(onSubmit)} className="card-surface flex flex-col gap-5 p-7">
         <Input
           label="PAN number"
           placeholder="ABCDE1234F"
@@ -120,9 +131,11 @@ export function CreatorKycPage() {
         />
         <Input label="Name as it appears on the PAN card" error={errors.nameOnPan?.message} {...register("nameOnPan")} />
         <KycDocumentUploadField
-          value={documentUrl || null}
-          onChange={(url) => setValue("documentUrl", url, { shouldValidate: true })}
-          error={errors.documentUrl?.message}
+          value={documentKey || null}
+          onChange={(key) => setValue("documentKey", key, { shouldValidate: true })}
+          error={errors.documentKey?.message}
+          creatorId={user!.id}
+          hasExistingDocument={!!data?.hasDocument}
         />
 
         <div className="flex items-center gap-3">

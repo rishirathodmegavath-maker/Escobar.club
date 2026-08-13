@@ -11,8 +11,23 @@ import { Spinner } from "@/components/Spinner";
 export function KycReviewPanel({ creatorId }: { creatorId: number }) {
   const [reviewing, setReviewing] = useState<"VERIFIED" | "REJECTED" | null>(null);
   const [note, setNote] = useState("");
+  const [openingDocument, setOpeningDocument] = useState(false);
   const queryClient = useQueryClient();
   const { push } = useToast();
+
+  const openDocument = async () => {
+    setOpeningDocument(true);
+    try {
+      const blob = await kycApi.fetchDocumentBlob(creatorId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      push(extractErrorMessage(err, "Couldn't load the document"), "error");
+    } finally {
+      setOpeningDocument(false);
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["kyc", "review", creatorId],
@@ -58,9 +73,16 @@ export function KycReviewPanel({ creatorId }: { creatorId: number }) {
           {data.nameOnPan}
         </span>
       </div>
-      <a href={data.documentUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-signal-600 hover:underline">
-        View uploaded document →
-      </a>
+      {data.hasDocument && (
+        <button
+          type="button"
+          onClick={openDocument}
+          disabled={openingDocument}
+          className="mt-2 inline-block text-sm text-signal-600 hover:underline disabled:opacity-50"
+        >
+          {openingDocument ? "Opening…" : "View uploaded document →"}
+        </button>
+      )}
 
       {data.status === "PENDING" && (
         <div className="mt-4">

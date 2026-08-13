@@ -28,6 +28,7 @@ app:
     provider: ${STORAGE_PROVIDER:local}
     upload-dir: ${UPLOAD_DIR:./uploads}
     base-url: ${UPLOAD_BASE_URL:/media}
+    private-upload-dir: ${UPLOAD_PRIVATE_DIR:./uploads-private}
     max-file-size-bytes: ${UPLOAD_MAX_BYTES:209715200}
     allowed-image-types: image/png,image/jpeg,image/webp,image/gif
     allowed-video-types: video/mp4,video/quicktime,video/webm

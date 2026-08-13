@@ -11,7 +11,7 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 RUN useradd --create-home --shell /bin/bash appuser && chown appuser:appuser /app
-RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+RUN mkdir -p /app/uploads /app/uploads-private && chown -R appuser:appuser /app/uploads /app/uploads-private
 
 COPY --from=build --chown=appuser:appuser /build/target/escobar-club.jar app.jar
 

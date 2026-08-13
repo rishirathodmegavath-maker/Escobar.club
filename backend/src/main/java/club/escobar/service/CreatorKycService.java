@@ -4,6 +4,7 @@ import club.escobar.dto.kyc.CreatorKycProfileResponse;
 import club.escobar.dto.kyc.CreatorKycReviewDetailResponse;
 import club.escobar.dto.kyc.CreatorKycReviewRequest;
 import club.escobar.dto.kyc.CreatorKycSubmitRequest;
+import club.escobar.storage.StoredFileContent;
 
 public interface CreatorKycService {
 
@@ -16,4 +17,7 @@ public interface CreatorKycService {
     CreatorKycReviewDetailResponse review(Long businessUserId, Long creatorUserId, CreatorKycReviewRequest request);
 
     CreatorKycReviewDetailResponse adminReview(Long adminUserId, Long creatorUserId, CreatorKycReviewRequest request);
+
+    /** {@code requesterRole} is the plain role name (e.g. "ADMIN"), as exposed by SecurityUser. */
+    StoredFileContent getDocument(Long requesterId, String requesterRole, Long creatorId);
 }

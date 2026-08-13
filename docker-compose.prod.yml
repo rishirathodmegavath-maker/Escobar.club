@@ -33,6 +33,7 @@ services:
       JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-15}
       JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-7}
       UPLOAD_DIR: /app/uploads
+      UPLOAD_PRIVATE_DIR: /app/uploads-private
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-us-east-1}
@@ -67,6 +68,10 @@ services:
       # Bind-mounted to a plain host directory (not an opaque Docker volume) so uploaded
       # media is easy to inspect/back up and to migrate to Cloudflare R2 later.
       - /opt/escobar-club/media:/app/uploads
+      # KYC documents. Deliberately NOT under Caddy/nginx's public web root and outside the
+      # backend's own /media/** static resource mapping - only reachable via the authenticated
+      # GET /api/kyc/{creatorId}/document endpoint.
+      - /opt/escobar-club/media-private:/app/uploads-private
 
   frontend:
     build:

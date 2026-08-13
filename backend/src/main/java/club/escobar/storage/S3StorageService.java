@@ -3,6 +3,7 @@ package club.escobar.storage;
 import club.escobar.config.S3StorageProperties;
 import club.escobar.config.StorageProperties;
 import club.escobar.exception.ApiException;
+import club.escobar.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,8 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -43,6 +46,73 @@ public class S3StorageService implements StorageService {
 
     @Override
     public StoredFile store(MultipartFile file) {
+        ValidatedUpload validated = validate(file);
+        String datePath = LocalDate.now().toString();
+        String key = datePath + "/" + UUID.randomUUID() + "." + validated.verified().extension();
+
+        try {
+            putObject(key, validated);
+            log.info("Stored uploaded file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, validated.bytes().length, validated.verified().contentType());
+
+            String publicUrl = s3Properties.publicBaseUrl() + "/" + key;
+            return new StoredFile(publicUrl, validated.verified().contentType(), (long) validated.bytes().length);
+        } catch (SdkException e) {
+            log.error("Failed to store uploaded file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    @Override
+    public PrivateStoredFile storePrivate(MultipartFile file) {
+        ValidatedUpload validated = validate(file);
+        String datePath = LocalDate.now().toString();
+        // "private/" prefix is a naming convention only - the bucket/CDN in front of it must itself
+        // deny public read on this prefix (or use a separate private bucket) for this to be effective.
+        String key = "private/kyc/" + datePath + "/" + UUID.randomUUID() + "." + validated.verified().extension();
+
+        try {
+            putObject(key, validated);
+            log.info("Stored private file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, validated.bytes().length, validated.verified().contentType());
+            return new PrivateStoredFile(key, validated.verified().contentType(), (long) validated.bytes().length);
+        } catch (SdkException e) {
+            log.error("Failed to store private file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    @Override
+    public StoredFileContent loadPrivate(String key) {
+        if (key == null || key.isBlank()) {
+            throw new ResourceNotFoundException("No document has been uploaded");
+        }
+        try {
+            byte[] bytes = client()
+                    .getObjectAsBytes(GetObjectRequest.builder().bucket(s3Properties.bucket()).key(key).build())
+                    .asByteArray();
+            String contentType = UploadValidator.verify(bytes).contentType();
+            return new StoredFileContent(bytes, contentType);
+        } catch (NoSuchKeyException e) {
+            throw new ResourceNotFoundException("Document not found");
+        } catch (SdkException e) {
+            log.error("Failed to load private file s3://{}/{}", s3Properties.bucket(), key, e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load the document");
+        }
+    }
+
+    private void putObject(String key, ValidatedUpload validated) {
+        client().putObject(
+                PutObjectRequest.builder()
+                        .bucket(s3Properties.bucket())
+                        .key(key)
+                        .contentType(validated.verified().contentType())
+                        .build(),
+                RequestBody.fromInputStream(new ByteArrayInputStream(validated.bytes()), validated.bytes().length));
+    }
+
+    private record ValidatedUpload(byte[] bytes, UploadValidator.Verified verified) {
+    }
+
+    private ValidatedUpload validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No file was provided");
         }
@@ -60,26 +130,7 @@ public class S3StorageService implements StorageService {
 
         UploadValidator.Verified verified = UploadValidator.verify(bytes);
         assertAllowed(verified.contentType());
-
-        String datePath = LocalDate.now().toString();
-        String key = datePath + "/" + UUID.randomUUID() + "." + verified.extension();
-
-        try {
-            client().putObject(
-                    PutObjectRequest.builder()
-                            .bucket(s3Properties.bucket())
-                            .key(key)
-                            .contentType(verified.contentType())
-                            .build(),
-                    RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length));
-            log.info("Stored uploaded file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, bytes.length, verified.contentType());
-
-            String publicUrl = s3Properties.publicBaseUrl() + "/" + key;
-            return new StoredFile(publicUrl, verified.contentType(), (long) bytes.length);
-        } catch (SdkException e) {
-            log.error("Failed to store uploaded file", e);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
-        }
+        return new ValidatedUpload(bytes, verified);
     }
 
     private void assertAllowed(String contentType) {

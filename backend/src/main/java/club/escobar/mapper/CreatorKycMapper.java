@@ -12,10 +12,17 @@ public interface CreatorKycMapper {
 
     @Mapping(target = "creatorId", source = "creator.id")
     @Mapping(target = "panNumberMasked", expression = "java(maskPan(entity.getPanNumber()))")
+    @Mapping(target = "hasDocument", expression = "java(hasDocument(entity.getDocumentKey()))")
     CreatorKycProfileResponse toResponse(CreatorKycProfile entity);
 
     @Mapping(target = "creatorId", source = "creator.id")
+    @Mapping(target = "hasDocument", expression = "java(hasDocument(entity.getDocumentKey()))")
     CreatorKycReviewDetailResponse toReviewDetailResponse(CreatorKycProfile entity);
+
+    @Named("hasDocument")
+    default boolean hasDocument(String documentKey) {
+        return documentKey != null && !documentKey.isBlank();
+    }
 
     // @Named so MapStruct only calls this where the expression above explicitly invokes it, rather
     // than auto-selecting it as an implicit String->String converter for every other string property

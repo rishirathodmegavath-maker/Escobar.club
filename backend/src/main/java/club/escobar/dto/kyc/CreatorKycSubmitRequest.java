@@ -12,7 +12,9 @@ public record CreatorKycSubmitRequest(
         @NotBlank @Size(max = 150)
         String nameOnPan,
 
-        @NotBlank @Size(max = 500)
-        String documentUrl
+        // Optional: omitted on a resubmit that keeps the previously-uploaded document. Required
+        // (enforced in CreatorKycServiceImpl.submit) when there is no existing document to fall back to.
+        @Size(max = 500)
+        String documentKey
 ) {
 }

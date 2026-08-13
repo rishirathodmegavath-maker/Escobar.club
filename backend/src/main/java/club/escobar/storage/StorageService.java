@@ -10,4 +10,10 @@ import org.springframework.web.multipart.MultipartFile;
 public interface StorageService {
 
     StoredFile store(MultipartFile file);
+
+    /** Stores a file outside any publicly-served path. Returns an opaque key, not a URL. */
+    PrivateStoredFile storePrivate(MultipartFile file);
+
+    /** Resolves a key previously returned by {@link #storePrivate} back to its bytes. */
+    StoredFileContent loadPrivate(String key);
 }

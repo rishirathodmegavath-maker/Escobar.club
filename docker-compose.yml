@@ -35,6 +35,7 @@ services:
       JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-15}
       JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-7}
       UPLOAD_DIR: /app/uploads
+      UPLOAD_PRIVATE_DIR: /app/uploads-private
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       APIFY_API_TOKEN: ${APIFY_API_TOKEN:?APIFY_API_TOKEN must be set}
       APIFY_ACTOR_ID: ${APIFY_ACTOR_ID:-apify~instagram-scraper}
@@ -60,6 +61,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - uploads_data:/app/uploads
+      - uploads_private_data:/app/uploads-private
 
   frontend:
     build:
@@ -75,3 +77,4 @@ services:
 volumes:
   mysql_data:
   uploads_data:
+  uploads_private_data:

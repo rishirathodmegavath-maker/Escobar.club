@@ -8,7 +8,7 @@ public record CreatorKycProfileResponse(
         Long creatorId,
         String panNumberMasked,
         String nameOnPan,
-        String documentUrl,
+        boolean hasDocument,
         KycStatus status,
         String reviewNote,
         Instant reviewedAt

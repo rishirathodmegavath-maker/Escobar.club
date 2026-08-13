@@ -15,6 +15,7 @@ import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.CreatorKycServiceImpl;
+import club.escobar.storage.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,8 @@ class CreatorKycServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private CreatorKycMapper creatorKycMapper;
+    @Mock
+    private StorageService storageService;
 
     @InjectMocks
     private CreatorKycServiceImpl creatorKycService;
@@ -58,7 +61,7 @@ class CreatorKycServiceImplTest {
         when(creatorKycProfileRepository.save(any(CreatorKycProfile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(creatorKycMapper.toResponse(any(CreatorKycProfile.class))).thenReturn(mock(CreatorKycProfileResponse.class));
 
-        creatorKycService.submit(1L, new CreatorKycSubmitRequest("ABCDE1234F", "Jamie Rivera", "https://x/pan.jpg"));
+        creatorKycService.submit(1L, new CreatorKycSubmitRequest("ABCDE1234F", "Jamie Rivera", "new-key.jpg"));
 
         var captor = org.mockito.ArgumentCaptor.forClass(CreatorKycProfile.class);
         verify(creatorKycProfileRepository).save(captor.capture());
@@ -70,13 +73,13 @@ class CreatorKycServiceImplTest {
     void submit_resetsToPending_whenResubmittingAfterRejection() {
         User reviewer = User.builder().id(2L).email("biz@test.com").role(UserRole.BUSINESS).build();
         CreatorKycProfile existing = CreatorKycProfile.builder().creator(creator).panNumber("OLDPAN123")
-                .nameOnPan("Old Name").documentUrl("old.jpg").status(KycStatus.REJECTED)
+                .nameOnPan("Old Name").documentKey("old.jpg").status(KycStatus.REJECTED)
                 .reviewedBy(reviewer).reviewNote("Blurry image").reviewedAt(java.time.Instant.now()).build();
         when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(existing));
         when(creatorKycProfileRepository.save(any(CreatorKycProfile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(creatorKycMapper.toResponse(any(CreatorKycProfile.class))).thenReturn(mock(CreatorKycProfileResponse.class));
 
-        creatorKycService.submit(1L, new CreatorKycSubmitRequest("ABCDE1234F", "Jamie Rivera", "https://x/pan-v2.jpg"));
+        creatorKycService.submit(1L, new CreatorKycSubmitRequest("ABCDE1234F", "Jamie Rivera", "new-key-v2.jpg"));
 
         assertThat(existing.getStatus()).isEqualTo(KycStatus.PENDING);
         assertThat(existing.getReviewedBy()).isNull();
@@ -95,7 +98,7 @@ class CreatorKycServiceImplTest {
     @Test
     void review_rejectsWhenNotPending() {
         CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
-                .nameOnPan("Jamie").documentUrl("doc.jpg").status(KycStatus.VERIFIED).build();
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.VERIFIED).build();
         when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(true);
         when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
 
@@ -107,7 +110,7 @@ class CreatorKycServiceImplTest {
     void review_verifiesPendingProfile_whenRelationshipExists() {
         User reviewer = User.builder().id(2L).email("biz@test.com").role(UserRole.BUSINESS).build();
         CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
-                .nameOnPan("Jamie").documentUrl("doc.jpg").status(KycStatus.PENDING).build();
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.PENDING).build();
         when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(true);
         when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
         when(userRepository.getReferenceById(2L)).thenReturn(reviewer);
@@ -124,5 +127,53 @@ class CreatorKycServiceImplTest {
     void maskPan_masksFirstSixCharacters() {
         CreatorKycMapper mapper = org.mapstruct.factory.Mappers.getMapper(CreatorKycMapper.class);
         assertThat(mapper.maskPan("ABCDE1234F")).isEqualTo("XXXXXX234F");
+    }
+
+    @Test
+    void getDocument_allowsCreatorToFetchTheirOwnDocument() {
+        CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("key.jpg").status(KycStatus.PENDING).build();
+        when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
+        var content = new club.escobar.storage.StoredFileContent(new byte[] {1}, "image/jpeg");
+        when(storageService.loadPrivate("key.jpg")).thenReturn(content);
+
+        assertThat(creatorKycService.getDocument(1L, "CREATOR", 1L)).isEqualTo(content);
+    }
+
+    @Test
+    void getDocument_allowsAdminRegardlessOfRelationship() {
+        CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("key.jpg").status(KycStatus.PENDING).build();
+        when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
+        var content = new club.escobar.storage.StoredFileContent(new byte[] {1}, "image/jpeg");
+        when(storageService.loadPrivate("key.jpg")).thenReturn(content);
+
+        assertThat(creatorKycService.getDocument(99L, "ADMIN", 1L)).isEqualTo(content);
+    }
+
+    @Test
+    void getDocument_allowsBusinessOnlyWithExistingRelationship() {
+        when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 2L)).thenReturn(true);
+        CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("key.jpg").status(KycStatus.PENDING).build();
+        when(creatorKycProfileRepository.findByCreator_Id(1L)).thenReturn(Optional.of(profile));
+        var content = new club.escobar.storage.StoredFileContent(new byte[] {1}, "image/jpeg");
+        when(storageService.loadPrivate("key.jpg")).thenReturn(content);
+
+        assertThat(creatorKycService.getDocument(2L, "BUSINESS", 1L)).isEqualTo(content);
+    }
+
+    @Test
+    void getDocument_rejectsBusinessWithoutRelationship() {
+        when(contentRepository.existsByCreator_IdAndBusiness_Id(1L, 3L)).thenReturn(false);
+
+        assertThatThrownBy(() -> creatorKycService.getDocument(3L, "BUSINESS", 1L))
+                .isInstanceOf(ForbiddenActionException.class);
+    }
+
+    @Test
+    void getDocument_rejectsAnotherCreator() {
+        assertThatThrownBy(() -> creatorKycService.getDocument(5L, "CREATOR", 1L))
+                .isInstanceOf(ForbiddenActionException.class);
     }
 }

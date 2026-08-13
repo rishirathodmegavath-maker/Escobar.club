@@ -4,7 +4,8 @@ import type { CreatorKycProfile, CreatorKycReviewDetail, KycStatus } from "@/typ
 export interface KycSubmitPayload {
   panNumber: string;
   nameOnPan: string;
-  documentUrl: string;
+  // Omit to keep the previously-uploaded document (e.g. resubmitting just to fix the PAN number).
+  documentKey?: string;
 }
 
 export interface KycReviewPayload {
@@ -13,7 +14,7 @@ export interface KycReviewPayload {
 }
 
 export interface KycUploadResult {
-  url: string;
+  documentKey: string;
   contentType: string;
   sizeBytes: number;
 }
@@ -30,7 +31,7 @@ export const kycApi = {
     const formData = new FormData();
     formData.append("file", file);
     return apiClient
-      .post<KycUploadResult>("/media/upload", formData, {
+      .post<KycUploadResult>("/kyc/document", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (evt) => {
           if (onProgress && evt.total) onProgress(Math.round((evt.loaded / evt.total) * 100));
@@ -38,4 +39,8 @@ export const kycApi = {
       })
       .then((r) => r.data);
   },
+  // The document is behind auth, so it can't be used directly as an <img src> or <a href> -
+  // fetch it as a blob and point the browser at an object URL instead.
+  fetchDocumentBlob: (creatorId: number) =>
+    apiClient.get<Blob>(`/kyc/${creatorId}/document`, { responseType: "blob" }).then((r) => r.data),
 };

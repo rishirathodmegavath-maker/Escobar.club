@@ -33,8 +33,10 @@ public class CreatorKycProfile {
     @Column(name = "name_on_pan", nullable = false, length = 150)
     private String nameOnPan;
 
+    // Column name kept as document_url for schema stability, but this now holds an opaque private
+    // storage key (see StorageService.storePrivate), never a fetchable URL.
     @Column(name = "document_url", nullable = false, length = 500)
-    private String documentUrl;
+    private String documentKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

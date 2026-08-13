@@ -153,7 +153,7 @@ export interface CreatorKycProfile {
   creatorId: number;
   panNumberMasked: string;
   nameOnPan: string;
-  documentUrl: string;
+  hasDocument: boolean;
   status: KycStatus;
   reviewNote: string | null;
   reviewedAt: string | null;
@@ -163,7 +163,7 @@ export interface CreatorKycReviewDetail {
   creatorId: number;
   panNumber: string;
   nameOnPan: string;
-  documentUrl: string;
+  hasDocument: boolean;
   status: KycStatus;
   reviewNote: string | null;
   reviewedAt: string | null;
