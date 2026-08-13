@@ -8,14 +8,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,32 +37,43 @@ public class LocalStorageService implements StorageService {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size");
         }
 
-        String contentType = file.getContentType();
-        List<String> allowed = new java.util.ArrayList<>();
-        allowed.addAll(storageProperties.allowedImageTypes());
-        allowed.addAll(storageProperties.allowedVideoTypes());
-        allowed.addAll(storageProperties.allowedDocumentTypes());
-        if (contentType == null || allowed.stream().noneMatch(contentType::equalsIgnoreCase)) {
-            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported file type: " + contentType);
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            log.error("Failed to read uploaded file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
         }
+
+        UploadValidator.Verified verified = UploadValidator.verify(bytes);
+        assertAllowed(verified.contentType());
 
         try {
             String datePath = LocalDate.now().toString();
             Path targetDir = Path.of(storageProperties.uploadDir(), datePath);
             Files.createDirectories(targetDir);
 
-            String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
-            String filename = UUID.randomUUID() + (StringUtils.hasText(extension) ? "." + extension : "");
+            String filename = UUID.randomUUID() + "." + verified.extension();
             Path targetPath = targetDir.resolve(filename);
 
-            file.transferTo(targetPath);
-            log.info("Stored uploaded file at {} ({} bytes, {})", targetPath, file.getSize(), contentType);
+            Files.write(targetPath, bytes);
+            log.info("Stored uploaded file at {} ({} bytes, {})", targetPath, bytes.length, verified.contentType());
 
             String publicUrl = storageProperties.baseUrl() + "/" + datePath + "/" + filename;
-            return new StoredFile(publicUrl, contentType, file.getSize());
+            return new StoredFile(publicUrl, verified.contentType(), (long) bytes.length);
         } catch (IOException e) {
             log.error("Failed to store uploaded file", e);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    private void assertAllowed(String contentType) {
+        List<String> allowed = new ArrayList<>();
+        allowed.addAll(storageProperties.allowedImageTypes());
+        allowed.addAll(storageProperties.allowedVideoTypes());
+        allowed.addAll(storageProperties.allowedDocumentTypes());
+        if (allowed.stream().noneMatch(contentType::equalsIgnoreCase)) {
+            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported file type: " + contentType);
         }
     }
 }

@@ -29,7 +29,6 @@ export interface UserSummary {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
   sessionId: number;
   user: UserSummary;
 }

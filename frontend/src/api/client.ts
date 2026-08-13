@@ -2,28 +2,26 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { AuthResponse } from "@/types";
 
 const ACCESS_TOKEN_KEY = "escobar.accessToken";
-const REFRESH_TOKEN_KEY = "escobar.refreshToken";
 const SESSION_ID_KEY = "escobar.sessionId";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "/api";
 
+// The refresh token lives in an httpOnly cookie set by the backend (see AuthController's
+// REFRESH_COOKIE) - it's never readable from JS, only the access token is kept here.
 export const tokenStorage = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
-  getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
   getSessionId: () => {
     const raw = localStorage.getItem(SESSION_ID_KEY);
     return raw ? Number(raw) : null;
   },
-  setTokens: (accessToken: string, refreshToken: string, sessionId?: number) => {
+  setTokens: (accessToken: string, sessionId?: number) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     if (sessionId !== undefined) {
       localStorage.setItem(SESSION_ID_KEY, String(sessionId));
     }
   },
   clear: () => {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(SESSION_ID_KEY);
   },
 };
@@ -31,6 +29,7 @@ export const tokenStorage = {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -50,12 +49,9 @@ export const onUnauthorized = (listener: UnauthorizedListener) => {
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = tokenStorage.getRefreshToken();
-  if (!refreshToken) return null;
-
   try {
-    const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/refresh`, { refreshToken });
-    tokenStorage.setTokens(response.data.accessToken, response.data.refreshToken, response.data.sessionId);
+    const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/refresh`, null, { withCredentials: true });
+    tokenStorage.setTokens(response.data.accessToken, response.data.sessionId);
     return response.data.accessToken;
   } catch {
     return null;

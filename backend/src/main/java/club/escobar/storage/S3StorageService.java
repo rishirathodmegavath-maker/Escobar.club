@@ -9,18 +9,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -50,34 +50,45 @@ public class S3StorageService implements StorageService {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size");
         }
 
-        String contentType = file.getContentType();
-        List<String> allowed = new ArrayList<>();
-        allowed.addAll(storageProperties.allowedImageTypes());
-        allowed.addAll(storageProperties.allowedVideoTypes());
-        allowed.addAll(storageProperties.allowedDocumentTypes());
-        if (contentType == null || allowed.stream().noneMatch(contentType::equalsIgnoreCase)) {
-            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported file type: " + contentType);
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            log.error("Failed to read uploaded file", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
         }
 
-        String datePath = LocalDate.now().toString();
-        String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        String key = datePath + "/" + UUID.randomUUID() + (StringUtils.hasText(extension) ? "." + extension : "");
+        UploadValidator.Verified verified = UploadValidator.verify(bytes);
+        assertAllowed(verified.contentType());
 
-        try (InputStream inputStream = file.getInputStream()) {
+        String datePath = LocalDate.now().toString();
+        String key = datePath + "/" + UUID.randomUUID() + "." + verified.extension();
+
+        try {
             client().putObject(
                     PutObjectRequest.builder()
                             .bucket(s3Properties.bucket())
                             .key(key)
-                            .contentType(contentType)
+                            .contentType(verified.contentType())
                             .build(),
-                    RequestBody.fromInputStream(inputStream, file.getSize()));
-            log.info("Stored uploaded file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, file.getSize(), contentType);
+                    RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length));
+            log.info("Stored uploaded file at s3://{}/{} ({} bytes, {})", s3Properties.bucket(), key, bytes.length, verified.contentType());
 
             String publicUrl = s3Properties.publicBaseUrl() + "/" + key;
-            return new StoredFile(publicUrl, contentType, file.getSize());
-        } catch (IOException e) {
+            return new StoredFile(publicUrl, verified.contentType(), (long) bytes.length);
+        } catch (SdkException e) {
             log.error("Failed to store uploaded file", e);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store the uploaded file");
+        }
+    }
+
+    private void assertAllowed(String contentType) {
+        List<String> allowed = new ArrayList<>();
+        allowed.addAll(storageProperties.allowedImageTypes());
+        allowed.addAll(storageProperties.allowedVideoTypes());
+        allowed.addAll(storageProperties.allowedDocumentTypes());
+        if (allowed.stream().noneMatch(contentType::equalsIgnoreCase)) {
+            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported file type: " + contentType);
         }
     }
 

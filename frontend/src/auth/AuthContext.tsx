@@ -58,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const persist = useCallback((nextUser: UserSummary, accessToken: string, refreshToken: string, sessionId: number) => {
-    tokenStorage.setTokens(accessToken, refreshToken, sessionId);
+  const persist = useCallback((nextUser: UserSummary, accessToken: string, sessionId: number) => {
+    tokenStorage.setTokens(accessToken, sessionId);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
   }, []);
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
       }
       const auth = response.auth!;
-      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      persist(auth.user, auth.accessToken, auth.sessionId);
       return { status: "success", user: auth.user };
     },
     [persist],
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyTwoFactor = useCallback(
     async (payload: TwoFactorVerifyPayload) => {
       const response = await authApi.verifyTwoFactor(payload);
-      persist(response.user, response.accessToken, response.refreshToken, response.sessionId);
+      persist(response.user, response.accessToken, response.sessionId);
       return response.user;
     },
     [persist],
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
       }
       const auth = response.auth!;
-      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      persist(auth.user, auth.accessToken, auth.sessionId);
       return { status: "success", user: auth.user };
     },
     [persist],
@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { status: "twoFactorRequired", challengeToken: response.challengeToken! };
       }
       const auth = response.auth!;
-      persist(auth.user, auth.accessToken, auth.refreshToken, auth.sessionId);
+      persist(auth.user, auth.accessToken, auth.sessionId);
       return { status: "success", user: auth.user };
     },
     [persist],
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyEmail = useCallback(
     async (payload: VerifyEmailPayload) => {
       const response = await authApi.verifyEmail(payload);
-      persist(response.user, response.accessToken, response.refreshToken, response.sessionId);
+      persist(response.user, response.accessToken, response.sessionId);
       return response.user;
     },
     [persist],
@@ -142,10 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    const refreshToken = tokenStorage.getRefreshToken();
-    if (refreshToken) {
-      authApi.logout(refreshToken).catch(() => undefined);
-    }
+    authApi.logout().catch(() => undefined);
     tokenStorage.clear();
     localStorage.removeItem(USER_KEY);
     setUser(null);
