@@ -20,9 +20,10 @@ jobs:
             cd /opt/escobar-club/app
             git fetch origin main
             git reset --hard origin/main
-            docker compose -f docker-compose.prod.yml up --build -d
-            # `up -d` only recreates a container when its service definition changes, not
-            # when a bind-mounted file's *content* does - so a Caddyfile-only edit is never
-            # picked up without an explicit restart.
-            docker compose -f docker-compose.prod.yml restart caddy
+            # `--force-recreate` because plain `up -d` sometimes skips recreating a container
+            # even when its resolved config (image, env, or a bind-mounted file's *content*)
+            # changed - bitten by this twice: once with Caddyfile-only edits, once with a
+            # .env-only change not reaching a rebuilt backend. Force it every deploy instead
+            # of trying to predict when compose's change-detection will or won't catch it.
+            docker compose -f docker-compose.prod.yml up --build -d --force-recreate
             docker image prune -f
