@@ -13,6 +13,9 @@ public record CreatorProfileUpdateRequest(
         @NotBlank @Pattern(regexp = "^https?://(www\\.)?instagram\\.com/.+", message = "Enter a valid Instagram profile URL")
         @Size(max = 500) String instagramProfileUrl,
         @NotNull @PositiveOrZero Long followerCount,
-        @Size(max = 30) List<@NotBlank @Size(max = 500) String> portfolioLinks
+        @Size(max = 30)
+        List<@NotBlank
+             @Pattern(regexp = "^https?://.+", message = "Portfolio links must start with http:// or https://")
+             @Size(max = 500) String> portfolioLinks
 ) {
 }

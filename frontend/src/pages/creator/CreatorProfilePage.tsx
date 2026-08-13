@@ -17,7 +17,11 @@ import { draftsApi } from "@/api/drafts";
 
 const DRAFT_KEY = "creator-profile";
 
-const linkSchema = z.object({ value: z.string().url("Must be a valid URL") });
+// z.string().url() would NOT reject javascript:/data:/vbscript: URIs - the WHATWG URL parser it's
+// built on treats those as syntactically valid URLs. This is a UX check only; the real boundary is
+// the backend's identical http(s)-only @Pattern on CreatorProfileUpdateRequest.portfolioLinks.
+const HTTP_URL_PATTERN = /^https?:\/\/.+/;
+const linkSchema = z.object({ value: z.string().regex(HTTP_URL_PATTERN, "Must start with http:// or https://") });
 const INSTAGRAM_PROFILE_PATTERN = /^https?:\/\/(www\.)?instagram\.com\/.+/;
 const schema = z.object({
   displayName: z.string().min(2).max(120),
