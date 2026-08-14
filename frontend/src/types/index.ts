@@ -157,6 +157,9 @@ export interface CreatorKycProfile {
   status: KycStatus;
   reviewNote: string | null;
   reviewedAt: string | null;
+  // True only once an admin has verified this creator's KYC - a business's own peer review
+  // (status can also be VERIFIED that way) is not sufficient to unlock campaign participation.
+  eligibleToParticipate: boolean;
 }
 
 export interface CreatorKycReviewDetail {

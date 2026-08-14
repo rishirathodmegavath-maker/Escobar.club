@@ -1,12 +1,14 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { campaignsApi } from "@/api/campaigns";
+import { kycApi } from "@/api/kyc";
 import { useAuth } from "@/auth/AuthContext";
 import { FullPageSpinner } from "@/components/Spinner";
 import { Avatar } from "@/components/Avatar";
 import { StatusPill } from "@/components/StatusPill";
 import { ContentSubmitCard } from "@/features/content/ContentSubmitCard";
-import type { Campaign } from "@/types";
+import { KycGateNotice } from "@/features/content/KycGateNotice";
+import type { Campaign, CreatorKycProfile } from "@/types";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" });
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -19,7 +21,15 @@ function daysUntil(dateStr: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
-function SubmissionPanel({ campaign }: { campaign: Campaign }) {
+function SubmissionPanel({
+  campaign,
+  kyc,
+  kycLoading,
+}: {
+  campaign: Campaign;
+  kyc: CreatorKycProfile | undefined;
+  kycLoading: boolean;
+}) {
   if (campaign.status === "UPCOMING") {
     const startsIn = daysUntil(campaign.publishStartAt);
     const deadlineIn = daysUntil(campaign.submissionDeadline);
@@ -34,13 +44,17 @@ function SubmissionPanel({ campaign }: { campaign: Campaign }) {
           </span>
         </div>
         {campaign.acceptingSubmissions ? (
-          <>
-            <p className="mb-4 text-sm text-ink-500">
-              Upload a piece of content for this campaign. The business will review it before it goes live — you can
-              submit as many pieces as you like.
-            </p>
-            <ContentSubmitCard campaign={campaign} />
-          </>
+          kycLoading ? null : kyc?.eligibleToParticipate ? (
+            <>
+              <p className="mb-4 text-sm text-ink-500">
+                Upload a piece of content for this campaign. The business will review it before it goes live — you can
+                submit as many pieces as you like.
+              </p>
+              <ContentSubmitCard campaign={campaign} />
+            </>
+          ) : (
+            <KycGateNotice kyc={kyc} />
+          )
         ) : (
           <p className="text-sm text-ink-500">Submissions have not opened yet — check back soon to upload content.</p>
         )}
@@ -72,6 +86,12 @@ export function CampaignDetailPage() {
     queryKey: ["campaign", campaignId],
     queryFn: () => campaignsApi.getById(campaignId),
     enabled: Number.isFinite(campaignId),
+  });
+  const { data: kyc, isLoading: kycLoading } = useQuery({
+    queryKey: ["kyc", "me"],
+    queryFn: kycApi.mine,
+    enabled: user?.role === "CREATOR",
+    retry: false,
   });
 
   if (isLoading) return <FullPageSpinner />;
@@ -120,7 +140,7 @@ export function CampaignDetailPage() {
       {user?.role === "CREATOR" && (
         <div className="card-surface p-7">
           <h2 className="mb-4 font-display text-lg font-semibold text-ink-800">Submit content</h2>
-          <SubmissionPanel campaign={campaign} />
+          <SubmissionPanel campaign={campaign} kyc={kyc} kycLoading={kycLoading} />
         </div>
       )}
     </div>

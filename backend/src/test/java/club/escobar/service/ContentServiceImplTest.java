@@ -118,6 +118,84 @@ class ContentServiceImplTest {
         verify(contentRepository, never()).save(any(Content.class));
     }
 
+    // The four scenarios below all resolve through the same admin-verified derived query and
+    // therefore hit the identical code path in ContentServiceImpl - they're kept as separate,
+    // explicitly-named tests (rather than folded into the generic test above) so each of the
+    // real-world KYC states this gate must block is independently documented and regression-tested.
+
+    @Test
+    void submit_rejectsWhenCreatorHasNotStartedKyc() {
+        // No CreatorKycProfile row exists yet - the derived query naturally returns false.
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void submit_rejectsWhenCreatorKycIsPending() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void submit_rejectsWhenCreatorKycIsRejected() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void submit_rejectsWhenKycVerifiedByBusinessOnly_notByAdmin() {
+        // A business's peer review can set status=VERIFIED, but the derived query specifically
+        // requires reviewedBy.role=ADMIN, so a business-only verification still returns false.
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void submit_allowsWhenCreatorKycIsAdminVerified() {
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(true);
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.submit(1L, new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE));
+
+        verify(contentRepository).save(any(Content.class));
+    }
+
     @Test
     void submit_rejectsWhenCampaignNotOpenForSubmissions() {
         campaign.setStatus(CampaignStatus.DRAFT);
@@ -157,6 +235,85 @@ class ContentServiceImplTest {
                 .isInstanceOf(ForbiddenActionException.class);
 
         verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    // As with submit() above, these resolve through the same derived query and hit the same code
+    // path - kept explicit so every real-world KYC state this gate must block on resubmission is
+    // independently documented and regression-tested.
+
+    private Content changesRequestedContent() {
+        return Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.CHANGES_REQUESTED).version(1).build();
+    }
+
+    @Test
+    void resubmit_rejectsWhenCreatorHasNotStartedKyc() {
+        Content content = changesRequestedContent();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.resubmit(1L, 20L,
+                new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void resubmit_rejectsWhenCreatorKycIsPending() {
+        Content content = changesRequestedContent();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.resubmit(1L, 20L,
+                new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void resubmit_rejectsWhenCreatorKycIsRejected() {
+        Content content = changesRequestedContent();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.resubmit(1L, 20L,
+                new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void resubmit_rejectsWhenKycVerifiedByBusinessOnly_notByAdmin() {
+        Content content = changesRequestedContent();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> contentService.resubmit(1L, 20L,
+                new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE)))
+                .isInstanceOf(ForbiddenActionException.class);
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void resubmit_allowsWhenCreatorKycIsAdminVerified() {
+        Content content = changesRequestedContent();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(1L, KycStatus.VERIFIED, UserRole.ADMIN))
+                .thenReturn(true);
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.resubmit(1L, 20L, new ContentUpdateRequest("new caption", "new.png", MediaType.IMAGE));
+
+        assertThat(content.getStatus()).isEqualTo(ContentStatus.SUBMITTED);
     }
 
     @Test
@@ -199,6 +356,24 @@ class ContentServiceImplTest {
         assertThat(content.getReviewNotes()).hasSize(2);
         assertThat(content.getReviewNotes().get(0).getNoteText()).isEqualTo("fix lighting");
         assertThat(content.getReviewNotes().get(1).getNoteText()).isEqualTo("great work");
+    }
+
+    @Test
+    void review_isNotBlockedByCreatorKycStatus() {
+        // Business review of already-submitted content must not be re-gated on the creator's current
+        // KYC status - the gate only applies at submit()/resubmit() time, before content exists.
+        // (No creatorKycProfileRepository stub here on purpose: review() must never consult it.)
+        Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
+        when(userRepository.getReferenceById(2L)).thenReturn(business);
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.review(2L, 20L, new ContentReviewRequest(ContentStatus.APPROVED, "looks good"));
+
+        assertThat(content.getStatus()).isEqualTo(ContentStatus.APPROVED);
+        verify(creatorKycProfileRepository, never()).existsByCreator_IdAndStatusAndReviewedBy_Role(any(), any(), any());
     }
 
     @Test

@@ -11,6 +11,10 @@ public record CreatorKycProfileResponse(
         boolean hasDocument,
         KycStatus status,
         String reviewNote,
-        Instant reviewedAt
+        Instant reviewedAt,
+        // True only when status is VERIFIED and the verification was authored by an admin - a
+        // business's own peer review of a creator's KYC does not unlock campaign participation
+        // platform-wide (same rule ContentServiceImpl/PayoutServiceImpl already enforce).
+        boolean eligibleToParticipate
 ) {
 }

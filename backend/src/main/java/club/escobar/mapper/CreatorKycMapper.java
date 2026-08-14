@@ -3,6 +3,8 @@ package club.escobar.mapper;
 import club.escobar.dto.kyc.CreatorKycProfileResponse;
 import club.escobar.dto.kyc.CreatorKycReviewDetailResponse;
 import club.escobar.entity.CreatorKycProfile;
+import club.escobar.entity.enums.KycStatus;
+import club.escobar.entity.enums.UserRole;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -13,6 +15,7 @@ public interface CreatorKycMapper {
     @Mapping(target = "creatorId", source = "creator.id")
     @Mapping(target = "panNumberMasked", expression = "java(maskPan(entity.getPanNumber()))")
     @Mapping(target = "hasDocument", expression = "java(hasDocument(entity.getDocumentKey()))")
+    @Mapping(target = "eligibleToParticipate", expression = "java(isAdminVerified(entity))")
     CreatorKycProfileResponse toResponse(CreatorKycProfile entity);
 
     @Mapping(target = "creatorId", source = "creator.id")
@@ -22,6 +25,15 @@ public interface CreatorKycMapper {
     @Named("hasDocument")
     default boolean hasDocument(String documentKey) {
         return documentKey != null && !documentKey.isBlank();
+    }
+
+    // @Named for the same reason as maskPan below - without it MapStruct tries to auto-select this
+    // as an implicit converter for unrelated boolean/entity properties on this mapper.
+    @Named("isAdminVerified")
+    default boolean isAdminVerified(CreatorKycProfile entity) {
+        return entity.getStatus() == KycStatus.VERIFIED
+                && entity.getReviewedBy() != null
+                && entity.getReviewedBy().getRole() == UserRole.ADMIN;
     }
 
     // @Named so MapStruct only calls this where the expression above explicitly invokes it, rather

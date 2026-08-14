@@ -130,6 +130,39 @@ class CreatorKycServiceImplTest {
     }
 
     @Test
+    void toResponse_eligibleToParticipateIsTrue_onlyWhenAdminVerified() {
+        CreatorKycMapper mapper = org.mapstruct.factory.Mappers.getMapper(CreatorKycMapper.class);
+        User admin = User.builder().id(9L).email("admin@test.com").role(UserRole.ADMIN).build();
+
+        CreatorKycProfile adminVerified = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.VERIFIED).reviewedBy(admin).build();
+        assertThat(mapper.toResponse(adminVerified).eligibleToParticipate()).isTrue();
+    }
+
+    @Test
+    void toResponse_eligibleToParticipateIsFalse_whenVerifiedByBusinessOnly() {
+        CreatorKycMapper mapper = org.mapstruct.factory.Mappers.getMapper(CreatorKycMapper.class);
+        User business = User.builder().id(2L).email("biz@test.com").role(UserRole.BUSINESS).build();
+
+        CreatorKycProfile businessVerified = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.VERIFIED).reviewedBy(business).build();
+        assertThat(mapper.toResponse(businessVerified).eligibleToParticipate()).isFalse();
+    }
+
+    @Test
+    void toResponse_eligibleToParticipateIsFalse_whenPendingOrRejected() {
+        CreatorKycMapper mapper = org.mapstruct.factory.Mappers.getMapper(CreatorKycMapper.class);
+
+        CreatorKycProfile pending = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.PENDING).build();
+        CreatorKycProfile rejected = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
+                .nameOnPan("Jamie").documentKey("doc.jpg").status(KycStatus.REJECTED).build();
+
+        assertThat(mapper.toResponse(pending).eligibleToParticipate()).isFalse();
+        assertThat(mapper.toResponse(rejected).eligibleToParticipate()).isFalse();
+    }
+
+    @Test
     void getDocument_allowsCreatorToFetchTheirOwnDocument() {
         CreatorKycProfile profile = CreatorKycProfile.builder().creator(creator).panNumber("ABCDE1234F")
                 .nameOnPan("Jamie").documentKey("key.jpg").status(KycStatus.PENDING).build();
