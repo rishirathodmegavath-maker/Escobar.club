@@ -2,10 +2,13 @@ package club.escobar.service.impl;
 
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
+import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
+import club.escobar.dto.campaign.CampaignScheduleUpdateRequest;
 import club.escobar.dto.campaign.CampaignUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
+import club.escobar.entity.CampaignScheduleChange;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
@@ -16,6 +19,7 @@ import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.CampaignMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
+import club.escobar.repository.CampaignScheduleChangeRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.CampaignService;
 import lombok.RequiredArgsConstructor;
@@ -43,10 +47,16 @@ public class CampaignServiceImpl implements CampaignService {
     private static final Logger log = LoggerFactory.getLogger(CampaignServiceImpl.class);
     private static final Set<CampaignStatus> MANUALLY_SELECTABLE_STATUSES =
             EnumSet.of(CampaignStatus.DRAFT, CampaignStatus.PUBLISHED, CampaignStatus.CANCELLED);
+    // Schedule changes (prepone/postpone) are only safe before the campaign is actually live -
+    // once LIVE/COMPLETED, content is already publishing/counted for payouts; CANCELLED campaigns
+    // should be reactivated via the general edit first if the business wants to relaunch them.
+    private static final Set<CampaignStatus> RESCHEDULABLE_STATUSES =
+            EnumSet.of(CampaignStatus.DRAFT, CampaignStatus.UPCOMING);
 
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
     private final BusinessProfileRepository businessProfileRepository;
+    private final CampaignScheduleChangeRepository campaignScheduleChangeRepository;
     private final CampaignMapper campaignMapper;
 
     @Override
@@ -115,6 +125,68 @@ public class CampaignServiceImpl implements CampaignService {
     }
 
     @Override
+    @Transactional
+    public CampaignResponse updateSchedule(Long businessUserId, Long campaignId, CampaignScheduleUpdateRequest request) {
+        Campaign campaign = findById(campaignId);
+        if (!campaign.getBusiness().getId().equals(businessUserId)) {
+            throw new ForbiddenActionException("You may only reschedule your own campaigns");
+        }
+        validateDateOrdering(request.submissionOpenAt(), request.submissionDeadline(),
+                request.publishStartAt(), request.publishEndAt());
+
+        CampaignStatus effectiveStatus = campaign.getEffectiveStatus();
+        if (!RESCHEDULABLE_STATUSES.contains(effectiveStatus)) {
+            throw new InvalidStateTransitionException(
+                    "Cannot change the schedule of a campaign that is " + effectiveStatus
+                            + " - only Draft or Upcoming campaigns can be rescheduled");
+        }
+        // The new publish start must still be strictly in the future - otherwise a "prepone" could
+        // instantly (and retroactively) flip the campaign to Live/Completed the moment it's saved.
+        if (!request.publishStartAt().isAfter(LocalDate.now())) {
+            throw new InvalidStateTransitionException("The new publishing start date must be in the future");
+        }
+
+        User business = userRepository.getReferenceById(businessUserId);
+        campaignScheduleChangeRepository.save(CampaignScheduleChange.builder()
+                .campaign(campaign)
+                .oldSubmissionOpenAt(campaign.getSubmissionOpenAt())
+                .oldSubmissionDeadline(campaign.getSubmissionDeadline())
+                .oldPublishStartAt(campaign.getPublishStartAt())
+                .oldPublishEndAt(campaign.getPublishEndAt())
+                .newSubmissionOpenAt(request.submissionOpenAt())
+                .newSubmissionDeadline(request.submissionDeadline())
+                .newPublishStartAt(request.publishStartAt())
+                .newPublishEndAt(request.publishEndAt())
+                .changedBy(business)
+                .build());
+
+        // Only the 4 date columns change - title/rate/status/urgent/matching-preferences and every
+        // existing Content/Payout/ContentReviewNote row are untouched by a schedule change.
+        campaign.setSubmissionOpenAt(request.submissionOpenAt());
+        campaign.setSubmissionDeadline(request.submissionDeadline());
+        campaign.setPublishStartAt(request.publishStartAt());
+        campaign.setPublishEndAt(request.publishEndAt());
+
+        Campaign saved = campaignRepository.save(campaign);
+        log.info("Business id={} changed schedule for campaign id={}", businessUserId, campaignId);
+        return withHot(campaignMapper.toResponse(saved), saved.isHot(computeActiveRateThreshold()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CampaignScheduleChangeResponse> getScheduleHistory(Long requestingUserId, String requestingRole, Long campaignId) {
+        Campaign campaign = findById(campaignId);
+        boolean isOwner = campaign.getBusiness().getId().equals(requestingUserId);
+        boolean isAdmin = "ADMIN".equals(requestingRole);
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenActionException("You do not have access to this campaign's schedule history");
+        }
+        return campaignScheduleChangeRepository.findByCampaign_IdOrderByChangedAtDesc(campaignId).stream()
+                .map(campaignMapper::toScheduleChangeResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<CampaignResponse> listPublic(String search, String category, Pageable pageable) {
         String normalizedSearch = StringUtils.hasText(search) ? search.trim() : null;
@@ -179,7 +251,7 @@ public class CampaignServiceImpl implements CampaignService {
                 response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
                 response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
                 response.acceptingSubmissions(), response.urgent(), hot, response.approvalStatus(),
-                response.adminDisplayStatus(), response.createdAt(), response.updatedAt());
+                response.adminDisplayStatus(), response.canChangeSchedule(), response.createdAt(), response.updatedAt());
     }
 
     // Top-quartile rate among campaigns currently open for creator submissions, used as one of the

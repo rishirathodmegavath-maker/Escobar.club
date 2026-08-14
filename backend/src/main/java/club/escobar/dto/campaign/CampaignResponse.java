@@ -26,6 +26,9 @@ public record CampaignResponse(
         boolean hot,
         ApprovalStatus approvalStatus,
         CampaignDisplayStatus adminDisplayStatus,
+        // Computed server-side from effective status only (DRAFT/UPCOMING = true) - the frontend
+        // must gate the "Change Schedule" action on this, not re-derive the rule from `status` itself.
+        boolean canChangeSchedule,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -6,7 +6,6 @@ import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.security.JwtAuthenticationFilter;
 import club.escobar.service.CampaignService;
-import club.escobar.service.CreatorMatchingService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,9 +41,6 @@ class CampaignControllerTest {
     private CampaignService campaignService;
 
     @MockBean
-    private CreatorMatchingService creatorMatchingService;
-
-    @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @AfterEach
@@ -56,7 +52,7 @@ class CampaignControllerTest {
         return new CampaignResponse(3L, 2L, "Acme Co", null, "Summer Launch", "desc",
                 LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
                 new BigDecimal("100.00"), CampaignStatus.PUBLISHED, true, false, false,
-                ApprovalStatus.APPROVED, null, null, null, null, Instant.now(), Instant.now());
+                ApprovalStatus.APPROVED, null, false, Instant.now(), Instant.now());
     }
 
     @Test

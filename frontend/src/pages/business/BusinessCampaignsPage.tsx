@@ -13,6 +13,7 @@ import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { CompassIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
+import { ChangeScheduleDialog } from "@/features/campaigns/ChangeScheduleDialog";
 import type { Campaign, ManualCampaignStatus } from "@/types";
 
 const schema = z
@@ -117,6 +118,7 @@ function CampaignForm({
 
 function CampaignListItem({ campaign }: { campaign: Campaign }) {
   const [editing, setEditing] = useState(false);
+  const [changingSchedule, setChangingSchedule] = useState(false);
   const queryClient = useQueryClient();
   const { push } = useToast();
 
@@ -184,10 +186,21 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
             Cancel
           </Button>
         </div>
+      ) : changingSchedule ? (
+        <div className="border-t border-ink-100 pt-4">
+          <ChangeScheduleDialog campaign={campaign} onClose={() => setChangingSchedule(false)} />
+        </div>
       ) : (
-        <Button variant="secondary" size="sm" className="self-start" onClick={() => setEditing(true)}>
-          Edit
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+          {campaign.canChangeSchedule && (
+            <Button variant="secondary" size="sm" onClick={() => setChangingSchedule(true)}>
+              📅 Change Schedule
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

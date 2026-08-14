@@ -102,8 +102,25 @@ export interface Campaign {
   hot: boolean;
   approvalStatus: ApprovalStatus;
   adminDisplayStatus: CampaignDisplayStatus | null;
+  // Computed server-side (true only for DRAFT/UPCOMING) - always gate the "Change Schedule" action
+  // on this field rather than re-deriving the rule from `status`.
+  canChangeSchedule: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CampaignScheduleChange {
+  id: number;
+  oldSubmissionOpenAt: string;
+  oldSubmissionDeadline: string;
+  oldPublishStartAt: string;
+  oldPublishEndAt: string;
+  newSubmissionOpenAt: string;
+  newSubmissionDeadline: string;
+  newPublishStartAt: string;
+  newPublishEndAt: string;
+  changedByUserId: number;
+  changedAt: string;
 }
 
 export type CampaignCategory = "HOT" | "LIVE" | "UPCOMING" | "COMPLETED";

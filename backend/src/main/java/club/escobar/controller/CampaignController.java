@@ -2,6 +2,8 @@ package club.escobar.controller;
 
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
+import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
+import club.escobar.dto.campaign.CampaignScheduleUpdateRequest;
 import club.escobar.dto.campaign.CampaignUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.security.SecurityUser;
@@ -15,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -58,5 +62,22 @@ public class CampaignController {
             @PathVariable Long id,
             @Valid @RequestBody CampaignUpdateRequest request) {
         return ResponseEntity.ok(campaignService.update(user.getId(), id, request));
+    }
+
+    @PatchMapping("/api/campaigns/{id}/schedule")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ResponseEntity<CampaignResponse> updateSchedule(
+            @AuthenticationPrincipal SecurityUser user,
+            @PathVariable Long id,
+            @Valid @RequestBody CampaignScheduleUpdateRequest request) {
+        return ResponseEntity.ok(campaignService.updateSchedule(user.getId(), id, request));
+    }
+
+    @GetMapping("/api/campaigns/{id}/schedule-history")
+    @PreAuthorize("hasRole('BUSINESS') or hasRole('ADMIN')")
+    public ResponseEntity<List<CampaignScheduleChangeResponse>> scheduleHistory(
+            @AuthenticationPrincipal SecurityUser user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(campaignService.getScheduleHistory(user.getId(), user.getRole(), id));
     }
 }

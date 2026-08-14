@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Campaign, CampaignCategory, ManualCampaignStatus, PageResponse } from "@/types";
+import type { Campaign, CampaignCategory, CampaignScheduleChange, ManualCampaignStatus, PageResponse } from "@/types";
 
 export interface CampaignSearchParams {
   search?: string;
@@ -23,6 +23,13 @@ export interface CampaignUpdatePayload extends CampaignFormPayload {
   status: ManualCampaignStatus;
 }
 
+export interface CampaignSchedulePayload {
+  submissionOpenAt: string;
+  submissionDeadline: string;
+  publishStartAt: string;
+  publishEndAt: string;
+}
+
 export const campaignsApi = {
   searchPublic: (params: CampaignSearchParams) =>
     apiClient
@@ -35,4 +42,8 @@ export const campaignsApi = {
     apiClient.post<Campaign>("/campaigns", payload).then((r) => r.data),
   update: (id: number, payload: CampaignUpdatePayload) =>
     apiClient.put<Campaign>(`/campaigns/${id}`, payload).then((r) => r.data),
+  updateSchedule: (id: number, payload: CampaignSchedulePayload) =>
+    apiClient.patch<Campaign>(`/campaigns/${id}/schedule`, payload).then((r) => r.data),
+  scheduleHistory: (id: number) =>
+    apiClient.get<CampaignScheduleChange[]>(`/campaigns/${id}/schedule-history`).then((r) => r.data),
 };
