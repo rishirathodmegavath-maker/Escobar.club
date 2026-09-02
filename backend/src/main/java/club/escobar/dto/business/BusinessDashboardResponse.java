@@ -16,6 +16,7 @@ public record BusinessDashboardResponse(
         long payoutsPayableCount,
         BigDecimal payoutsPayableAmountInr,
         long payoutsPendingKycCount,
-        BigDecimal totalPaidOutInr
+        BigDecimal totalPaidOutInr,
+        long campaignsNearBudgetCap
 ) {
 }

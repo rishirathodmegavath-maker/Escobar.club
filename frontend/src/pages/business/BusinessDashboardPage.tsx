@@ -87,6 +87,14 @@ export function BusinessDashboardPage() {
           sublabel={`Across ${data.payoutsPayableCount} creator${data.payoutsPayableCount === 1 ? "" : "s"}`}
           to="/business/payouts?status=PAYABLE"
         />
+        {data.campaignsNearBudgetCap > 0 && (
+          <StatCard
+            label="Near budget cap"
+            value={String(data.campaignsNearBudgetCap)}
+            sublabel="80%+ of the spend cap committed"
+            to="/business/campaigns"
+          />
+        )}
       </div>
 
       <div className="now-bar">

@@ -25,11 +25,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.util.EnumSet;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class BusinessProfileServiceImpl implements BusinessProfileService {
 
     private static final Logger log = LoggerFactory.getLogger(BusinessProfileServiceImpl.class);
+    // Mirrors CampaignServiceImpl.COMMITTED_PAYOUT_STATUSES - everything except BELOW_THRESHOLD,
+    // which always carries a zero amount anyway.
+    private static final Set<PayoutStatus> COMMITTED_PAYOUT_STATUSES =
+            EnumSet.of(PayoutStatus.PENDING_KYC, PayoutStatus.PAYABLE, PayoutStatus.PAID);
+    private static final BigDecimal BUDGET_CAP_WARNING_THRESHOLD = new BigDecimal("0.8");
 
     private final BusinessProfileRepository businessProfileRepository;
     private final BusinessProfileMapper businessProfileMapper;
@@ -111,7 +120,8 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
                 payoutRepository.countByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAYABLE),
                 payoutRepository.sumAmountInrByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAYABLE),
                 payoutRepository.countByBusiness_IdAndStatus(businessUserId, PayoutStatus.PENDING_KYC),
-                payoutRepository.sumAmountInrByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAID)
+                payoutRepository.sumAmountInrByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAID),
+                campaignRepository.countNearBudgetCapByBusinessId(businessUserId, COMMITTED_PAYOUT_STATUSES, BUDGET_CAP_WARNING_THRESHOLD)
         );
     }
 

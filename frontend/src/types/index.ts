@@ -112,6 +112,9 @@ export interface Campaign {
   // acceptingSubmissions above still correctly reflects a budget-exhausted campaign either way.
   maxBudgetInr: number | null;
   committedBudgetInr: number | null;
+  // Human-readable reason submissions are closed (date window, or the budget cap) - null while
+  // accepting. Unlike the budget fields above, safe on every endpoint, public listing included.
+  submissionClosedReason: string | null;
   approvalStatus: ApprovalStatus;
   adminDisplayStatus: CampaignDisplayStatus | null;
   // Computed server-side (true only for DRAFT/UPCOMING) - always gate the "Change Schedule" action
@@ -258,6 +261,7 @@ export interface BusinessDashboardSummary {
   payoutsPayableAmountInr: number;
   payoutsPendingKycCount: number;
   totalPaidOutInr: number;
+  campaignsNearBudgetCap: number;
 }
 
 export interface AdminCreatorSummary {

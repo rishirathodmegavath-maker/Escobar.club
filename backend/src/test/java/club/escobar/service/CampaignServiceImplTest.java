@@ -31,6 +31,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,6 +76,16 @@ class CampaignServiceImplTest {
                                                   LocalDate publishStartAt, LocalDate publishEndAt) {
         return new CampaignCreateRequest("Launch", "desc", submissionOpenAt, submissionDeadline,
                 publishStartAt, publishEndAt, new BigDecimal("100.00"), false, null);
+    }
+
+    // Stands in for what CampaignMapper.toResponse() would really produce - acceptingSubmissions is
+    // the one field the caller controls directly, since withBudget()'s reason logic branches on it.
+    private CampaignResponse mapperResponse(Campaign campaign, boolean acceptingSubmissions) {
+        return new CampaignResponse(campaign.getId(), 2L, "Acme Co", null, campaign.getTitle(), campaign.getDescription(),
+                campaign.getSubmissionOpenAt(), campaign.getSubmissionDeadline(), campaign.getPublishStartAt(),
+                campaign.getPublishEndAt(), campaign.getRatePerThousandViewsInr(), campaign.getStatus(),
+                acceptingSubmissions, false, false, null, null,
+                ApprovalStatus.APPROVED, null, false, Instant.now(), Instant.now(), null);
     }
 
     @Test
@@ -522,5 +534,50 @@ class CampaignServiceImplTest {
 
         assertThatThrownBy(() -> campaignService.getScheduleHistory(999L, "BUSINESS", 5L))
                 .isInstanceOf(ForbiddenActionException.class);
+    }
+
+    @Test
+    void getById_reportsNoClosedReasonWhenAcceptingSubmissions() {
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, true));
+
+        CampaignResponse result = campaignService.getById(5L);
+
+        assertThat(result.acceptingSubmissions()).isTrue();
+        assertThat(result.submissionClosedReason()).isNull();
+    }
+
+    @Test
+    void getById_reportsDateBasedReasonWhenSubmissionWindowHasNotOpenedYet() {
+        Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now().plusDays(3)).submissionDeadline(LocalDate.now().plusDays(10))
+                .publishStartAt(LocalDate.now().plusDays(11)).publishEndAt(LocalDate.now().plusDays(30))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.PUBLISHED).build();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, false));
+
+        CampaignResponse result = campaignService.getById(5L);
+
+        assertThat(result.acceptingSubmissions()).isFalse();
+        assertThat(result.submissionClosedReason()).isEqualTo("Submissions have not opened yet.");
+    }
+
+    @Test
+    void getById_reportsBudgetCapReasonWhenWindowIsOpenButBudgetIsExhausted() {
+        Campaign campaign = upcomingCampaign();
+        campaign.setMaxBudgetInr(new BigDecimal("1000.00"));
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, true));
+        when(payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(eq(5L), any())).thenReturn(new BigDecimal("1000.00"));
+
+        CampaignResponse result = campaignService.getById(5L);
+
+        assertThat(result.acceptingSubmissions()).isFalse();
+        assertThat(result.submissionClosedReason())
+                .isEqualTo("This campaign has reached its budget cap and is no longer accepting new submissions.");
+        // getById is the public/creator-facing endpoint - never leak the actual rupee figures.
+        assertThat(result.maxBudgetInr()).isNull();
+        assertThat(result.committedBudgetInr()).isNull();
     }
 }

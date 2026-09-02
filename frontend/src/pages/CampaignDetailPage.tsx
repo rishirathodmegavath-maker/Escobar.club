@@ -56,7 +56,9 @@ function SubmissionPanel({
             <KycGateNotice kyc={kyc} />
           )
         ) : (
-          <p className="text-sm text-ink-500">Submissions have not opened yet — check back soon to upload content.</p>
+          <p className="text-sm text-ink-500">
+            {campaign.submissionClosedReason ?? "Submissions have not opened yet — check back soon to upload content."}
+          </p>
         )}
       </>
     );

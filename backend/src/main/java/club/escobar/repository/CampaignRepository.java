@@ -3,6 +3,7 @@ package club.escobar.repository;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
+import club.escobar.entity.enums.PayoutStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 public interface CampaignRepository extends JpaRepository<Campaign, Long> {
@@ -31,6 +33,21 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
             and c.publishEndAt >= CURRENT_DATE
             """)
     long countLiveByBusinessId(@Param("businessId") Long businessId);
+
+    // "Near cap" = committed (PENDING_KYC+PAYABLE+PAID) payouts have reached at least
+    // thresholdFraction of the campaign's budget cap - an early warning before submissions
+    // actually auto-close. Campaigns with no cap set (unlimited) never match.
+    @Query("""
+            select count(c) from Campaign c
+            where c.business.id = :businessId
+            and c.maxBudgetInr is not null
+            and coalesce((select sum(p.amountInr) from Payout p
+                          where p.campaign = c and p.status in :statuses), 0)
+                >= c.maxBudgetInr * :thresholdFraction
+            """)
+    long countNearBudgetCapByBusinessId(@Param("businessId") Long businessId,
+                                         @Param("statuses") Collection<PayoutStatus> statuses,
+                                         @Param("thresholdFraction") BigDecimal thresholdFraction);
 
     @Query("""
             select c from Campaign c

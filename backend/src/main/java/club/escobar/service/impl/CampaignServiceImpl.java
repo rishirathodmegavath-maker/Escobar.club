@@ -280,7 +280,7 @@ public class CampaignServiceImpl implements CampaignService {
                 response.acceptingSubmissions(), response.urgent(), hot,
                 response.maxBudgetInr(), response.committedBudgetInr(),
                 response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
-                response.createdAt(), response.updatedAt());
+                response.createdAt(), response.updatedAt(), response.submissionClosedReason());
     }
 
     // Recomputes acceptingSubmissions to account for the budget cap (isOpenForSubmissions() alone
@@ -295,6 +295,11 @@ public class CampaignServiceImpl implements CampaignService {
             budgetExhausted = committed.compareTo(entity.getMaxBudgetInr()) >= 0;
         }
         boolean accepting = response.acceptingSubmissions() && !budgetExhausted;
+        // If dates already closed submissions, that's the real reason regardless of budget -
+        // otherwise the budget cap is the only thing that could have flipped `accepting` to false.
+        String closedReason = accepting ? null
+                : !response.acceptingSubmissions() ? entity.submissionClosedReason()
+                : "This campaign has reached its budget cap and is no longer accepting new submissions.";
         return new CampaignResponse(response.id(), response.businessId(), response.businessCompanyName(),
                 response.businessLogoUrl(), response.title(), response.description(),
                 response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
@@ -303,7 +308,7 @@ public class CampaignServiceImpl implements CampaignService {
                 exposeBudget ? entity.getMaxBudgetInr() : null,
                 exposeBudget ? committed : null,
                 response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
-                response.createdAt(), response.updatedAt());
+                response.createdAt(), response.updatedAt(), closedReason);
     }
 
     // Top-quartile rate among campaigns currently open for creator submissions, used as one of the

@@ -34,6 +34,11 @@ public record CampaignResponse(
         // must gate the "Change Schedule" action on this, not re-derive the rule from `status` itself.
         boolean canChangeSchedule,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // Human-readable reason submissions are closed (date-window reasons, or the budget cap) -
+        // null while accepting. Unlike maxBudgetInr/committedBudgetInr this never reveals a
+        // business's actual budget figures, so it's safe to expose on every endpoint including the
+        // public/creator-facing ones.
+        String submissionClosedReason
 ) {
 }
