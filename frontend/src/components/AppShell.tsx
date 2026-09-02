@@ -323,7 +323,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="min-w-0 flex-1 px-4 pb-8 pt-20 sm:px-6 lg:px-12 lg:py-8 lg:pt-8">
         <div className="mx-auto max-w-6xl animate-fade-in">
-          <div className="mb-4 flex items-center gap-1.5">
+          <div className="mb-4 flex items-center justify-between">
             <button
               type="button"
               aria-label="Go back"
