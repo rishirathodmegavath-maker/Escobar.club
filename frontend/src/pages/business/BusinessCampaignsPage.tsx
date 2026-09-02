@@ -155,11 +155,11 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
   });
 
   return (
-    <div className="card-surface flex flex-col gap-4 p-6">
+    <div className="card-surface flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-display text-lg font-semibold text-ink-900">{campaign.title}</h3>
-          <p className="font-mono text-xs text-ink-400">
+          <h3 className="font-display text-base font-semibold text-ink-900">{campaign.title}</h3>
+          <p className="mt-0.5 font-mono text-xs text-ink-400">
             Submissions {campaign.submissionOpenAt} – {campaign.submissionDeadline} · Live {campaign.publishStartAt} –{" "}
             {campaign.publishEndAt} · {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
           </p>
@@ -261,7 +261,7 @@ export function BusinessCampaignsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink-900">My campaigns</h1>
@@ -314,7 +314,7 @@ export function BusinessCampaignsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
             {data.content.map((campaign) => (
               <CampaignListItem key={campaign.id} campaign={campaign} />
             ))}

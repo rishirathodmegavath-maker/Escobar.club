@@ -14,7 +14,7 @@ export function LeaderboardPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl font-semibold text-ink-900">Global leaderboard</h1>
         <p className="mt-1.5 text-ink-500">Creators ranked by total views across every published piece of content.</p>

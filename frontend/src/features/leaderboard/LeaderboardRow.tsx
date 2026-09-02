@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { Link } from "react-router-dom";
 import type { LeaderboardEntry } from "@/types";
 import { Avatar } from "@/components/Avatar";
 
@@ -29,10 +30,13 @@ export function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
         <RankBadge rank={entry.rank} />
       </td>
       <td className="py-3 pr-4">
-        <div className="flex items-center gap-3">
+        <Link
+          to={`/creators/${entry.creatorId}`}
+          className="focus-ring flex w-fit items-center gap-3 font-medium text-ink-900 hover:text-signal-700"
+        >
           <Avatar name={entry.creatorDisplayName} imageUrl={entry.creatorProfilePictureUrl} size={32} />
-          <span className="font-medium text-ink-900">{entry.creatorDisplayName}</span>
-        </div>
+          {entry.creatorDisplayName}
+        </Link>
       </td>
       <td className="py-3 pr-4 text-right font-mono tabular-nums text-ink-600">{entry.publishedContentCount}</td>
       <td className="py-3 pr-4 text-right font-mono text-base font-semibold tabular-nums text-ink-900">

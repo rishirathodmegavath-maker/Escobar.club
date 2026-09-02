@@ -25,6 +25,7 @@ import { BusinessProfileViewPage } from "@/pages/business/BusinessProfileViewPag
 import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPage";
 import { BusinessCampaignsPage } from "@/pages/business/BusinessCampaignsPage";
 import { LeaderboardPage } from "@/pages/LeaderboardPage";
+import { CreatorPublicProfilePage } from "@/pages/CreatorPublicProfilePage";
 import { SecuritySettingsPage } from "@/pages/SecuritySettingsPage";
 import { AdminLoginPage } from "@/pages/admin/AdminLoginPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
@@ -198,6 +199,16 @@ export default function App() {
           <ProtectedRoute allowedRoles={["CREATOR", "BUSINESS"]}>
             <AppShell>
               <LeaderboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/creators/:creatorId"
+        element={
+          <ProtectedRoute allowedRoles={["CREATOR", "BUSINESS"]}>
+            <AppShell>
+              <CreatorPublicProfilePage />
             </AppShell>
           </ProtectedRoute>
         }
