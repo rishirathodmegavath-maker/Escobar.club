@@ -36,4 +36,6 @@ public interface AdminService {
     AdminCampaignSummaryResponse setCampaignDisplayStatus(Long campaignId, CampaignDisplayStatusUpdateRequest request);
 
     PageResponse<AdminContentSummaryResponse> listContent(ContentStatus status, Pageable pageable);
+
+    AdminContentSummaryResponse reviewContentLink(Long adminUserId, Long contentId, ApprovalDecisionRequest request);
 }

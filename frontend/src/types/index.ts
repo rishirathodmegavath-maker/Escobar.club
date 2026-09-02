@@ -1,6 +1,13 @@
 export type UserRole = "CREATOR" | "BUSINESS" | "ADMIN";
 
-export type ContentStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "APPROVED" | "REJECTED" | "PUBLISHED";
+export type ContentStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "CHANGES_REQUESTED"
+  | "APPROVED"
+  | "REJECTED"
+  | "PENDING_LINK_REVIEW"
+  | "PUBLISHED";
 
 export type MediaType = "IMAGE" | "VIDEO";
 

@@ -103,4 +103,12 @@ public class AdminController {
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(adminService.listContent(status, pageable));
     }
+
+    @PatchMapping("/content/{id}/link-review")
+    public ResponseEntity<AdminContentSummaryResponse> reviewContentLink(
+            @AuthenticationPrincipal SecurityUser admin,
+            @PathVariable Long id,
+            @Valid @RequestBody ApprovalDecisionRequest request) {
+        return ResponseEntity.ok(adminService.reviewContentLink(admin.getId(), id, request));
+    }
 }

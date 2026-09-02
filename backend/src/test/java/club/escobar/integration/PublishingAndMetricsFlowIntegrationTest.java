@@ -14,6 +14,7 @@ import club.escobar.dto.content.ContentResponse;
 import club.escobar.dto.content.ContentReviewRequest;
 import club.escobar.dto.metrics.ContentMetricsSnapshotResponse;
 import club.escobar.dto.metrics.LeaderboardEntryResponse;
+import club.escobar.entity.Content;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.ContentStatus;
@@ -22,6 +23,7 @@ import club.escobar.entity.enums.UserRole;
 import club.escobar.integration.apify.ApifyInstagramClient;
 import club.escobar.integration.apify.ApifyPostMetrics;
 import club.escobar.repository.BusinessProfileRepository;
+import club.escobar.repository.ContentRepository;
 import club.escobar.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +55,9 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private BusinessProfileRepository businessProfileRepository;
+
+    @Autowired
+    private ContentRepository contentRepository;
 
     private final TestRestTemplate rest = new TestRestTemplate();
 
@@ -136,7 +141,7 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
                         authHeaders(creatorAuth.accessToken())),
                 ContentResponse.class);
         assertThat(publishResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(publishResponse.getBody().status()).isEqualTo(ContentStatus.PUBLISHED);
+        assertThat(publishResponse.getBody().status()).isEqualTo(ContentStatus.PENDING_LINK_REVIEW);
 
         // Publishing again is rejected (no longer APPROVED)
         var publishAgain = rest.exchange(baseUrl() + "/api/content/" + contentId + "/publish", HttpMethod.PATCH,
@@ -144,6 +149,14 @@ class PublishingAndMetricsFlowIntegrationTest extends AbstractIntegrationTest {
                         authHeaders(creatorAuth.accessToken())),
                 String.class);
         assertThat(publishAgain.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // Admin link-approval is exercised in its own unit-level coverage (AdminServiceImpl); here we
+        // just grandfather it the same way business approval is grandfathered above, so this test can
+        // stay focused on the metrics/leaderboard flow that follows.
+        Content publishedContent = contentRepository.findById(contentId).orElseThrow();
+        publishedContent.setStatus(ContentStatus.PUBLISHED);
+        publishedContent.setPublishedAt(java.time.Instant.now());
+        contentRepository.save(publishedContent);
 
         // Stub the Apify call - real Apify is out of scope for this test environment
         when(apifyInstagramClient.fetchPostMetrics(any())).thenReturn(new ApifyPostMetrics(10L, 3L, 250L, "{}"));

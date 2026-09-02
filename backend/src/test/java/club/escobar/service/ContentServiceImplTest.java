@@ -388,7 +388,7 @@ class ContentServiceImplTest {
     }
 
     @Test
-    void publish_transitionsApprovedToPublished_andStoresUrlAndTimestamp() {
+    void publish_transitionsApprovedToPendingLinkReview_andStoresUrl() {
         Content content = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
                 .mediaUrl("old.png").mediaType(MediaType.IMAGE).status(ContentStatus.APPROVED).version(1).build();
         when(contentRepository.findById(20L)).thenReturn(Optional.of(content));
@@ -397,9 +397,10 @@ class ContentServiceImplTest {
 
         contentService.publish(1L, 20L, new ContentPublishRequest("https://www.instagram.com/p/Cabc123/"));
 
-        assertThat(content.getStatus()).isEqualTo(ContentStatus.PUBLISHED);
+        // Not PUBLISHED yet - an admin must approve the link first (see AdminServiceImpl.reviewContentLink).
+        assertThat(content.getStatus()).isEqualTo(ContentStatus.PENDING_LINK_REVIEW);
         assertThat(content.getPostUrl()).isEqualTo("https://www.instagram.com/p/Cabc123/");
-        assertThat(content.getPublishedAt()).isNotNull();
+        assertThat(content.getPublishedAt()).isNull();
     }
 
     @Test

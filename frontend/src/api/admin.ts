@@ -68,4 +68,6 @@ export const adminApi = {
     apiClient
       .get<PageResponse<AdminContentSummary>>("/admin/content", { params: { size: 20, ...params } })
       .then((r) => r.data),
+  reviewContentLink: (id: number, payload: ApprovalDecisionPayload) =>
+    apiClient.patch<AdminContentSummary>(`/admin/content/${id}/link-review`, payload).then((r) => r.data),
 };

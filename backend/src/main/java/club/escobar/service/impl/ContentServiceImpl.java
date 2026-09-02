@@ -150,11 +150,11 @@ public class ContentServiceImpl implements ContentService {
         }
 
         content.setPostUrl(request.postUrl());
-        content.setPublishedAt(Instant.now());
-        content.setStatus(ContentStatus.PUBLISHED);
+        content.setStatus(ContentStatus.PENDING_LINK_REVIEW);
 
         Content saved = contentRepository.save(content);
-        log.info("Creator id={} published content id={} at {}", creatorUserId, contentId, saved.getPostUrl());
+        log.info("Creator id={} submitted link for content id={}, awaiting admin review: {}",
+                creatorUserId, contentId, saved.getPostUrl());
         return contentMapper.toResponse(saved);
     }
 

@@ -14,6 +14,7 @@ import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
 import club.escobar.entity.ContentMetricsSnapshot;
+import club.escobar.entity.ContentReviewNote;
 import club.escobar.entity.CreatorKycProfile;
 import club.escobar.entity.CreatorProfile;
 import club.escobar.entity.User;
@@ -22,6 +23,7 @@ import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
+import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
@@ -41,6 +43,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -162,6 +166,42 @@ public class AdminServiceImpl implements AdminService {
                 ? contentRepository.findAll(pageable)
                 : contentRepository.findByStatus(status, pageable);
         return PageResponse.of(page.map(this::toContentSummary));
+    }
+
+    @Override
+    @Transactional
+    public AdminContentSummaryResponse reviewContentLink(Long adminUserId, Long contentId, ApprovalDecisionRequest request) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Content not found with id " + contentId));
+        if (content.getStatus() != ContentStatus.PENDING_LINK_REVIEW) {
+            throw new InvalidStateTransitionException(
+                    "Cannot review a link for content that is currently " + content.getStatus() + "; it must be PENDING_LINK_REVIEW");
+        }
+        if (request.status() != ApprovalStatus.APPROVED && request.status() != ApprovalStatus.REJECTED) {
+            throw new InvalidStateTransitionException("Link review decision must be APPROVED or REJECTED");
+        }
+
+        if (request.status() == ApprovalStatus.APPROVED) {
+            content.setStatus(ContentStatus.PUBLISHED);
+            content.setPublishedAt(Instant.now());
+        } else {
+            // Reverts to APPROVED (not the submitted link) so the creator can paste a different link
+            // via the same "approved, now publish" flow - PublishContentForm already renders for that status.
+            content.setStatus(ContentStatus.APPROVED);
+            content.setPostUrl(null);
+        }
+
+        User admin = userRepository.getReferenceById(adminUserId);
+        content.addReviewNote(ContentReviewNote.builder()
+                .authoredBy(admin)
+                .contentVersion(content.getVersion())
+                .decision(request.status() == ApprovalStatus.APPROVED ? ContentStatus.APPROVED : ContentStatus.REJECTED)
+                .noteText(request.note())
+                .build());
+
+        Content saved = contentRepository.save(content);
+        log.info("Admin id={} reviewed link for content id={}: {}", adminUserId, contentId, request.status());
+        return toContentSummary(saved);
     }
 
     private Campaign findCampaign(Long campaignId) {

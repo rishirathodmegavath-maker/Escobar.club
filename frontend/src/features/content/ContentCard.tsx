@@ -7,6 +7,7 @@ import { TextArea } from "@/components/Field";
 import { MediaUploadField } from "./MediaUploadField";
 import { ReviewNotesTimeline } from "./ReviewNotesTimeline";
 import { PublishContentForm } from "./PublishContentForm";
+import { PublishedLinkStatus } from "./PublishedLinkStatus";
 import { ContentMetricsPanel } from "./ContentMetricsPanel";
 import { PayoutPanel } from "./PayoutPanel";
 import { contentApi } from "@/api/content";
@@ -87,6 +88,8 @@ export function ContentCard({ content }: { content: ContentRecord }) {
       )}
 
       {content.status === "APPROVED" && <PublishContentForm content={content} />}
+
+      <PublishedLinkStatus content={content} />
 
       {content.status === "PUBLISHED" && (
         <>

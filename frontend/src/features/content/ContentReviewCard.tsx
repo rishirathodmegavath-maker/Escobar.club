@@ -6,6 +6,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { Button } from "@/components/Button";
 import { TextArea } from "@/components/Field";
 import { ReviewNotesTimeline } from "./ReviewNotesTimeline";
+import { PublishedLinkStatus } from "./PublishedLinkStatus";
 import { ContentMetricsPanel } from "./ContentMetricsPanel";
 import { PayoutPanel } from "./PayoutPanel";
 import { CreatorProfileInline } from "./CreatorProfileInline";
@@ -112,6 +113,8 @@ export function ContentReviewCard({ content }: { content: ContentRecord }) {
           )}
         </div>
       )}
+
+      <PublishedLinkStatus content={content} />
 
       {content.status === "PUBLISHED" && (
         <>

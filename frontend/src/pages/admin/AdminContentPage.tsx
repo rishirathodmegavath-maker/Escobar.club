@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/api/admin";
+import { extractErrorMessage } from "@/api/client";
+import { useToast } from "@/components/Toast";
+import { Button } from "@/components/Button";
+import { TextArea } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -12,6 +16,7 @@ import type { ContentStatus } from "@/types";
 
 const tabs: { label: string; value: ContentStatus | undefined }[] = [
   { label: "Published", value: "PUBLISHED" },
+  { label: "Pending links", value: "PENDING_LINK_REVIEW" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "All", value: undefined },
 ];
@@ -42,6 +47,58 @@ function timeAgo(iso: string | null | undefined): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function LinkReviewActions({ contentId }: { contentId: number }) {
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState("");
+  const queryClient = useQueryClient();
+  const { push } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: (status: "APPROVED" | "REJECTED") =>
+      adminApi.reviewContentLink(contentId, { status, note: note || undefined }),
+    onSuccess: (_, status) => {
+      push(status === "APPROVED" ? "Link approved - now live" : "Link rejected", "success");
+      queryClient.invalidateQueries({ queryKey: ["admin", "content"] });
+      setRejecting(false);
+      setNote("");
+    },
+    onError: (err) => push(extractErrorMessage(err), "error"),
+  });
+
+  if (rejecting) {
+    return (
+      <div className="flex flex-col items-end gap-2">
+        <TextArea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          placeholder="Reason (optional)"
+          className="w-56"
+        />
+        <div className="flex gap-2">
+          <Button size="sm" variant="danger" isLoading={mutation.isPending} onClick={() => mutation.mutate("REJECTED")}>
+            Confirm reject
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setRejecting(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex justify-end gap-2">
+      <Button size="sm" isLoading={mutation.isPending} onClick={() => mutation.mutate("APPROVED")}>
+        Approve
+      </Button>
+      <Button size="sm" variant="danger" onClick={() => setRejecting(true)}>
+        Reject
+      </Button>
+    </div>
+  );
 }
 
 export function AdminContentPage() {
@@ -88,6 +145,7 @@ export function AdminContentPage() {
                 <th className="px-5 py-3 text-right font-medium tabular-nums">Likes</th>
                 <th className="px-5 py-3 text-right font-medium tabular-nums">Comments</th>
                 <th className="px-5 py-3 font-medium">Last synced</th>
+                <th className="px-5 py-3 text-right font-medium">Link review</th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +177,9 @@ export function AdminContentPage() {
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCount(item.likeCount)}</td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCount(item.commentCount)}</td>
                   <td className="px-5 py-3.5 text-xs text-ink-400">{timeAgo(item.metricsLastSyncedAt)}</td>
+                  <td className="px-5 py-3.5">
+                    {item.status === "PENDING_LINK_REVIEW" && <LinkReviewActions contentId={item.id} />}
+                  </td>
                 </tr>
               ))}
             </tbody>

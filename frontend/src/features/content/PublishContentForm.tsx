@@ -18,7 +18,7 @@ export function PublishContentForm({ content }: { content: ContentRecord }) {
   const mutation = useMutation({
     mutationFn: () => contentApi.publish(content.id, postUrl),
     onSuccess: () => {
-      push("Content published!", "success");
+      push("Link submitted for admin review!", "success");
       queryClient.invalidateQueries({ queryKey: ["content"] });
     },
     onError: (err) => setError(extractErrorMessage(err, "Could not publish this content")),
@@ -37,7 +37,8 @@ export function PublishContentForm({ content }: { content: ContentRecord }) {
     <div className="border-t border-ink-100 pt-4">
       <div className="flex flex-col gap-3">
         <p className="text-sm text-ink-600">
-          Approved! Post this content to Instagram from your own account, then paste the live link here.
+          Approved! Post this content to Instagram from your own account, then paste the live link here for admin
+          review. It goes live once an admin approves it.
         </p>
         {error && <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">{error}</div>}
         <Input
@@ -46,7 +47,7 @@ export function PublishContentForm({ content }: { content: ContentRecord }) {
           onChange={(e) => setPostUrl(e.target.value)}
         />
         <Button isLoading={mutation.isPending} onClick={handleSubmit} variant="gold" className="self-start">
-          Mark as published
+          Submit link for review
         </Button>
       </div>
     </div>

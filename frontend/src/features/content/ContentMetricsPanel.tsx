@@ -58,18 +58,16 @@ export function ContentMetricsPanel({ content }: { content: ContentRecord }) {
         <Spinner className="mt-3" />
       ) : (
         <>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-paper-100 px-3 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-ink-400">Likes</p>
-              <p className="font-mono text-lg font-semibold text-ink-900">{formatCount(latest?.likeCount ?? null)}</p>
-            </div>
-            <div className="rounded-lg bg-paper-100 px-3 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-ink-400">Comments</p>
-              <p className="font-mono text-lg font-semibold text-ink-900">{formatCount(latest?.commentCount ?? null)}</p>
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-gold-soft px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-wide text-gold-deep">Views</p>
               <p className="font-mono text-lg font-semibold text-ink-900">{formatCount(latest?.viewCount ?? null)}</p>
+            </div>
+            <div className="rounded-lg bg-gold-soft px-3 py-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-gold-deep">Total views</p>
+              <p className="font-mono text-lg font-semibold text-ink-900">
+                {latest?.viewCount == null ? "—" : latest.viewCount.toLocaleString()}
+              </p>
             </div>
           </div>
 
