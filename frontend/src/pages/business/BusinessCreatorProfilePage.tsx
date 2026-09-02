@@ -7,7 +7,7 @@ export function BusinessCreatorProfilePage() {
   const id = Number(creatorId);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
         <Link to="/business/content" className="focus-ring text-sm font-medium text-signal-600 hover:text-signal-700">
           ← Back to review queue

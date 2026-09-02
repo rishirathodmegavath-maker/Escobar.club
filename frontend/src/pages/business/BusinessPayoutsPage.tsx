@@ -93,7 +93,7 @@ export function BusinessPayoutsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl font-semibold text-ink-900">Payouts</h1>
         <p className="mt-1.5 text-ink-500">What you owe creators for published content, and what's already been paid.</p>
