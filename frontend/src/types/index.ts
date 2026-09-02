@@ -200,7 +200,9 @@ export interface Payout {
   id: number;
   contentId: number;
   creatorId: number;
+  creatorDisplayName: string | null;
   campaignId: number;
+  campaignTitle: string;
   businessId: number;
   viewCountUsed: number;
   rateUsed: number;
@@ -236,6 +238,21 @@ export interface AdminDashboardSummary {
   totalCampaigns: number;
   pendingCampaignApprovals: number;
   pendingCreatorKyc: number;
+}
+
+export interface BusinessDashboardSummary {
+  approvalStatus: ApprovalStatus;
+  totalCampaigns: number;
+  liveCampaigns: number;
+  campaignsPendingApproval: number;
+  contentAwaitingReview: number;
+  contentChangesRequested: number;
+  contentPendingLinkReview: number;
+  publishedContentCount: number;
+  payoutsPayableCount: number;
+  payoutsPayableAmountInr: number;
+  payoutsPendingKycCount: number;
+  totalPaidOutInr: number;
 }
 
 export interface AdminCreatorSummary {

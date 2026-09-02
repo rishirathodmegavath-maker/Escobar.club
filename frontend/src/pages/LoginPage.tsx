@@ -84,7 +84,7 @@ export function LoginPage() {
       return;
     }
     const from = (location.state as { from?: Location })?.from?.pathname;
-    navigate(from ?? (user.role === "BUSINESS" ? "/business/content" : "/"), { replace: true });
+    navigate(from ?? (user.role === "BUSINESS" ? "/business/dashboard" : "/"), { replace: true });
   };
 
   const resetToPasswordMode = () => {

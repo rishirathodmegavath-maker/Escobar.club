@@ -16,7 +16,21 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
 
     Page<Campaign> findByBusiness_Id(Long businessId, Pageable pageable);
 
+    long countByBusiness_Id(Long businessId);
+
+    long countByBusiness_IdAndApprovalStatus(Long businessId, ApprovalStatus approvalStatus);
+
     long countByApprovalStatus(ApprovalStatus status);
+
+    // Mirrors Campaign.getEffectiveStatus()'s LIVE window (PUBLISHED and today within the publish dates).
+    @Query("""
+            select count(c) from Campaign c
+            where c.business.id = :businessId
+            and c.status = club.escobar.entity.enums.CampaignStatus.PUBLISHED
+            and c.publishStartAt <= CURRENT_DATE
+            and c.publishEndAt >= CURRENT_DATE
+            """)
+    long countLiveByBusinessId(@Param("businessId") Long businessId);
 
     @Query("""
             select c from Campaign c

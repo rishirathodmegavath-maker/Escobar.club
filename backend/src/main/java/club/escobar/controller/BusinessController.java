@@ -1,5 +1,6 @@
 package club.escobar.controller;
 
+import club.escobar.dto.business.BusinessDashboardResponse;
 import club.escobar.dto.business.BusinessProfileResponse;
 import club.escobar.dto.business.BusinessProfileUpdateRequest;
 import club.escobar.dto.common.PageResponse;
@@ -45,5 +46,11 @@ public class BusinessController {
             @AuthenticationPrincipal SecurityUser user,
             @Valid @RequestBody BusinessProfileUpdateRequest request) {
         return ResponseEntity.ok(businessProfileService.updateOwnProfile(user.getId(), request));
+    }
+
+    @GetMapping("/api/businesses/me/dashboard")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ResponseEntity<BusinessDashboardResponse> getOwnDashboard(@AuthenticationPrincipal SecurityUser user) {
+        return ResponseEntity.ok(businessProfileService.dashboard(user.getId()));
     }
 }

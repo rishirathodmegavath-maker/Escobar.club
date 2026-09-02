@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { contentApi } from "@/api/content";
 import { useAuth } from "@/auth/AuthContext";
@@ -14,13 +15,21 @@ const tabs: { label: string; value: ContentStatus | undefined }[] = [
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Changes requested", value: "CHANGES_REQUESTED" },
   { label: "Approved", value: "APPROVED" },
+  { label: "Published", value: "PUBLISHED" },
   { label: "Rejected", value: "REJECTED" },
   { label: "All", value: undefined },
 ];
 
+function parseStatusParam(raw: string | null): ContentStatus | undefined {
+  if (raw === null) return "SUBMITTED";
+  if (raw === "ALL") return undefined;
+  return raw as ContentStatus;
+}
+
 export function BusinessContentReviewPage() {
   const { user } = useAuth();
-  const [status, setStatus] = useState<ContentStatus | undefined>("SUBMITTED");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const status = parseStatusParam(searchParams.get("status"));
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
@@ -29,6 +38,11 @@ export function BusinessContentReviewPage() {
     enabled: !!user,
   });
 
+  const handleStatusChange = (next: ContentStatus | undefined) => {
+    setPage(0);
+    setSearchParams(next ? { status: next } : { status: "ALL" }, { replace: true });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -36,14 +50,7 @@ export function BusinessContentReviewPage() {
         <p className="mt-1.5 text-ink-500">Approve, reject, or request changes on submitted creator content.</p>
       </div>
 
-      <Tabs
-        tabs={tabs}
-        value={status}
-        onChange={(v) => {
-          setStatus(v);
-          setPage(0);
-        }}
-      />
+      <Tabs tabs={tabs} value={status} onChange={handleStatusChange} />
 
       {isLoading ? (
         <FullPageSpinner />

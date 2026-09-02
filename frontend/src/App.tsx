@@ -15,7 +15,9 @@ import { CreatorHelpPage } from "@/pages/CreatorHelpPage";
 import { CreatorContentPage } from "@/pages/creator/CreatorContentPage";
 import { CreatorProfilePage } from "@/pages/creator/CreatorProfilePage";
 import { CreatorKycPage } from "@/pages/creator/CreatorKycPage";
+import { BusinessDashboardPage } from "@/pages/business/BusinessDashboardPage";
 import { BusinessContentReviewPage } from "@/pages/business/BusinessContentReviewPage";
+import { BusinessPayoutsPage } from "@/pages/business/BusinessPayoutsPage";
 import { BusinessProfilePage } from "@/pages/business/BusinessProfilePage";
 import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPage";
 import { BusinessCampaignsPage } from "@/pages/business/BusinessCampaignsPage";
@@ -97,11 +99,31 @@ export default function App() {
       />
 
       <Route
+        path="/business/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["BUSINESS"]}>
+            <AppShell>
+              <BusinessDashboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/business/content"
         element={
           <ProtectedRoute allowedRoles={["BUSINESS"]}>
             <AppShell>
               <BusinessContentReviewPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/business/payouts"
+        element={
+          <ProtectedRoute allowedRoles={["BUSINESS"]}>
+            <AppShell>
+              <BusinessPayoutsPage />
             </AppShell>
           </ProtectedRoute>
         }

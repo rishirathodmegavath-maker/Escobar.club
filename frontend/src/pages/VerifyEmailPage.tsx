@@ -18,7 +18,7 @@ export function VerifyEmailPage() {
 
     verifyEmail({ token })
       .then((user) => {
-        navigate(user.role === "BUSINESS" ? "/business/content" : "/", { replace: true });
+        navigate(user.role === "BUSINESS" ? "/business/dashboard" : "/", { replace: true });
       })
       .catch((err) => {
         setError(extractErrorMessage(err, "This verification link is invalid or has expired"));

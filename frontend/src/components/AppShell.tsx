@@ -23,6 +23,7 @@ import {
   SunIcon,
   MoonIcon,
   ChevronRightIcon,
+  CoinIcon,
 } from "./icons";
 
 const SIDEBAR_COLLAPSED_KEY = "escobar.sidebarCollapsed";
@@ -42,6 +43,10 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
   if (role === "BUSINESS") {
     return [
       {
+        label: "Overview",
+        items: [{ to: "/business/dashboard", label: "Dashboard", icon: SparkIcon }],
+      },
+      {
         label: "Browse",
         items: [
           { to: "/", label: "Discover", icon: CompassIcon },
@@ -53,6 +58,7 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
         items: [
           { to: "/business/campaigns", label: "My campaigns", icon: MegaphoneIcon },
           { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
+          { to: "/business/payouts", label: "Payouts", icon: CoinIcon },
           { to: "/business/profile", label: "Company profile", icon: UserIcon },
           { to: "/account/security", label: "Security", icon: ShieldIcon },
         ],

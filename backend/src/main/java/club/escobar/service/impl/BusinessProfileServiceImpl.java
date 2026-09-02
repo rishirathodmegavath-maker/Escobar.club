@@ -1,14 +1,20 @@
 package club.escobar.service.impl;
 
+import club.escobar.dto.business.BusinessDashboardResponse;
 import club.escobar.dto.business.BusinessProfileResponse;
 import club.escobar.dto.business.BusinessProfileUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.enums.ApprovalStatus;
+import club.escobar.entity.enums.ContentStatus;
+import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.exception.DuplicateResourceException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.BusinessProfileMapper;
 import club.escobar.repository.BusinessProfileRepository;
+import club.escobar.repository.CampaignRepository;
+import club.escobar.repository.ContentRepository;
+import club.escobar.repository.PayoutRepository;
 import club.escobar.service.BusinessProfileService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -27,6 +33,9 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
 
     private final BusinessProfileRepository businessProfileRepository;
     private final BusinessProfileMapper businessProfileMapper;
+    private final CampaignRepository campaignRepository;
+    private final ContentRepository contentRepository;
+    private final PayoutRepository payoutRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -82,6 +91,28 @@ public class BusinessProfileServiceImpl implements BusinessProfileService {
         BusinessProfile saved = businessProfileRepository.save(profile);
         log.info("Business profile updated for user id={}", userId);
         return businessProfileMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BusinessDashboardResponse dashboard(Long businessUserId) {
+        BusinessProfile profile = businessProfileRepository.findByUser_Id(businessUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business profile not found for user id " + businessUserId));
+
+        return new BusinessDashboardResponse(
+                profile.getApprovalStatus(),
+                campaignRepository.countByBusiness_Id(businessUserId),
+                campaignRepository.countLiveByBusinessId(businessUserId),
+                campaignRepository.countByBusiness_IdAndApprovalStatus(businessUserId, ApprovalStatus.PENDING),
+                contentRepository.countByBusiness_IdAndStatus(businessUserId, ContentStatus.SUBMITTED),
+                contentRepository.countByBusiness_IdAndStatus(businessUserId, ContentStatus.CHANGES_REQUESTED),
+                contentRepository.countByBusiness_IdAndStatus(businessUserId, ContentStatus.PENDING_LINK_REVIEW),
+                contentRepository.countByBusiness_IdAndStatus(businessUserId, ContentStatus.PUBLISHED),
+                payoutRepository.countByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAYABLE),
+                payoutRepository.sumAmountInrByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAYABLE),
+                payoutRepository.countByBusiness_IdAndStatus(businessUserId, PayoutStatus.PENDING_KYC),
+                payoutRepository.sumAmountInrByBusiness_IdAndStatus(businessUserId, PayoutStatus.PAID)
+        );
     }
 
     private BusinessProfile findById(Long id) {

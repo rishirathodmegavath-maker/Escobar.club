@@ -1,5 +1,6 @@
 package club.escobar.service;
 
+import club.escobar.dto.business.BusinessDashboardResponse;
 import club.escobar.dto.business.BusinessProfileResponse;
 import club.escobar.dto.business.BusinessProfileUpdateRequest;
 import club.escobar.dto.common.PageResponse;
@@ -14,4 +15,6 @@ public interface BusinessProfileService {
     BusinessProfileResponse getByUserId(Long userId);
 
     BusinessProfileResponse updateOwnProfile(Long userId, BusinessProfileUpdateRequest request);
+
+    BusinessDashboardResponse dashboard(Long businessUserId);
 }

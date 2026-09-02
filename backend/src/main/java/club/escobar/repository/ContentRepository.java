@@ -14,6 +14,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByBusiness_IdAndStatus(Long businessId, ContentStatus status, Pageable pageable);
 
+    long countByBusiness_IdAndStatus(Long businessId, ContentStatus status);
+
     Page<Content> findByCreator_Id(Long creatorId, Pageable pageable);
 
     Page<Content> findByStatus(ContentStatus status, Pageable pageable);

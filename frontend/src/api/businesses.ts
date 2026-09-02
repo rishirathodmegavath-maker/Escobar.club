@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { BusinessProfile, PageResponse } from "@/types";
+import type { BusinessDashboardSummary, BusinessProfile, PageResponse } from "@/types";
 
 export interface BusinessSearchParams {
   search?: string;
@@ -32,6 +32,7 @@ export const businessesApi = {
       .then((r) => r.data),
   getById: (id: number) => apiClient.get<BusinessProfile>(`/businesses/${id}`).then((r) => r.data),
   getMine: () => apiClient.get<BusinessProfile>("/businesses/me").then((r) => r.data),
+  dashboard: () => apiClient.get<BusinessDashboardSummary>("/businesses/me/dashboard").then((r) => r.data),
   updateMine: (payload: BusinessUpdatePayload) =>
     apiClient.put<BusinessProfile>("/businesses/me", payload).then((r) => r.data),
   uploadLogo: (file: File, onProgress?: (percent: number) => void) => {
