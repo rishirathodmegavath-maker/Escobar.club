@@ -261,7 +261,7 @@ export function BusinessCampaignsPage() {
   });
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink-900">My campaigns</h1>
@@ -314,7 +314,7 @@ export function BusinessCampaignsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             {data.content.map((campaign) => (
               <CampaignListItem key={campaign.id} campaign={campaign} />
             ))}
