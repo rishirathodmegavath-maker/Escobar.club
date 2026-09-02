@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { campaignsApi } from "@/api/campaigns";
 import { extractErrorMessage } from "@/api/client";
@@ -15,6 +16,8 @@ import { CompassIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
 import { ChangeScheduleDialog } from "@/features/campaigns/ChangeScheduleDialog";
 import type { Campaign, ManualCampaignStatus } from "@/types";
+
+type StatFilter = "LIVE" | "PENDING";
 
 const schema = z
   .object({
@@ -232,6 +235,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
 export function BusinessCampaignsPage() {
   const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState<StatFilter | null>(null);
   const queryClient = useQueryClient();
   const { push } = useToast();
 
@@ -239,6 +243,15 @@ export function BusinessCampaignsPage() {
     queryKey: ["campaigns", "mine", page],
     queryFn: () => campaignsApi.mine(page),
   });
+
+  const toggleFilter = (next: StatFilter) => setFilter((current) => (current === next ? null : next));
+  const visibleCampaigns = data
+    ? filter === "LIVE"
+      ? data.content.filter((c) => c.status === "LIVE")
+      : filter === "PENDING"
+        ? data.content.filter((c) => c.approvalStatus === "PENDING")
+        : data.content
+    : [];
 
   const createMutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -296,29 +309,54 @@ export function BusinessCampaignsPage() {
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3.5">
-            <div className="card-surface flex flex-col gap-1 p-4">
+            <button
+              type="button"
+              onClick={() => setFilter(null)}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === null ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Total campaigns</p>
               <p className="font-mono text-xl font-bold text-ink-900">{data.totalElements}</p>
-            </div>
-            <div className="card-surface flex flex-col gap-1 p-4">
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFilter("LIVE")}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === "LIVE" ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Live now</p>
               <p className="font-mono text-xl font-bold text-ink-900">
                 {data.content.filter((c) => c.status === "LIVE").length}
               </p>
-            </div>
-            <div className="card-surface flex flex-col gap-1 p-4">
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFilter("PENDING")}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === "PENDING" ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Awaiting admin</p>
               <p className="font-mono text-xl font-bold text-ink-900">
                 {data.content.filter((c) => c.approvalStatus === "PENDING").length}
               </p>
-            </div>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-            {data.content.map((campaign) => (
-              <CampaignListItem key={campaign.id} campaign={campaign} />
-            ))}
-          </div>
+          {visibleCampaigns.length === 0 ? (
+            <EmptyState icon={<CompassIcon className="h-10 w-10" />} title="Nothing matches this filter" />
+          ) : (
+            <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+              {visibleCampaigns.map((campaign) => (
+                <CampaignListItem key={campaign.id} campaign={campaign} />
+              ))}
+            </div>
+          )}
         </>
       )}
 
