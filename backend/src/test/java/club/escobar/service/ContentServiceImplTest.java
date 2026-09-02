@@ -1,5 +1,7 @@
 package club.escobar.service;
 
+import club.escobar.dto.content.ContentBulkReviewRequest;
+import club.escobar.dto.content.ContentBulkReviewResponse;
 import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentPublishRequest;
 import club.escobar.dto.content.ContentResponse;
@@ -12,6 +14,7 @@ import club.escobar.entity.enums.CampaignStatus;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.MediaType;
+import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
@@ -19,6 +22,7 @@ import club.escobar.mapper.ContentMapper;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
+import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.ContentServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +34,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +57,8 @@ class ContentServiceImplTest {
     private ContentMapper contentMapper;
     @Mock
     private CreatorKycProfileRepository creatorKycProfileRepository;
+    @Mock
+    private PayoutRepository payoutRepository;
 
     private ContentServiceImpl contentService;
 
@@ -60,7 +68,10 @@ class ContentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository, creatorKycProfileRepository, contentMapper);
+        // self=null is fine here - none of the tests below call reviewBulk(), the only method that
+        // uses it. The reviewBulk tests build their own two-instance wiring (see reviewBulk_...).
+        contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
+                creatorKycProfileRepository, payoutRepository, contentMapper, null);
         lenient().when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(anyLong(), any(), any()))
                 .thenReturn(true);
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).build();
@@ -205,6 +216,50 @@ class ContentServiceImplTest {
         assertThatThrownBy(() -> contentService.submit(1L,
                 new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
                 .isInstanceOf(InvalidStateTransitionException.class);
+    }
+
+    @Test
+    void submit_acceptedWhenCommittedPayoutsAreUnderTheCampaignBudget() {
+        campaign.setMaxBudgetInr(new BigDecimal("1000.00"));
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(eq(3L), any()))
+                .thenReturn(new BigDecimal("400.00"));
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.submit(1L, new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE));
+
+        verify(contentRepository).save(any(Content.class));
+    }
+
+    @Test
+    void submit_rejectedWhenCommittedPayoutsHaveReachedTheCampaignBudget() {
+        campaign.setMaxBudgetInr(new BigDecimal("1000.00"));
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(eq(3L), any()))
+                .thenReturn(new BigDecimal("1000.00"));
+
+        assertThatThrownBy(() -> contentService.submit(1L,
+                new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE)))
+                .isInstanceOf(InvalidStateTransitionException.class)
+                .hasMessageContaining("budget cap");
+
+        verify(contentRepository, never()).save(any(Content.class));
+    }
+
+    @Test
+    void submit_neverConsultsPayoutRepositoryWhenCampaignHasNoBudgetCap() {
+        // campaign.maxBudgetInr is null by default (see setUp()) - unlimited, today's behavior.
+        when(campaignRepository.findById(3L)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentMapper.toResponse(any(Content.class))).thenReturn(mock(ContentResponse.class));
+
+        contentService.submit(1L, new ContentCreateRequest(3L, "caption", "http://x/media.png", MediaType.IMAGE));
+
+        verify(payoutRepository, never()).sumAmountInrByCampaign_IdAndStatusIn(any(), any());
     }
 
     @Test
@@ -423,5 +478,45 @@ class ContentServiceImplTest {
         assertThatThrownBy(() -> contentService.publish(999L, 20L,
                 new ContentPublishRequest("https://www.instagram.com/p/Cabc123/")))
                 .isInstanceOf(ForbiddenActionException.class);
+    }
+
+    // reviewBulk() calls self.review(...) per item so each one gets its own transaction in
+    // production (see the @Lazy self field in ContentServiceImpl). For this unit test, "self" is
+    // wired to a second ContentServiceImpl instance sharing the same mocks - functionally equivalent
+    // to true self-invocation, since both instances read/write through the same mocked repositories.
+    private ContentServiceImpl contentServiceWithWorkingSelf() {
+        ContentServiceImpl inner = new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
+                creatorKycProfileRepository, payoutRepository, contentMapper, null);
+        return new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
+                creatorKycProfileRepository, payoutRepository, contentMapper, inner);
+    }
+
+    @Test
+    void reviewBulk_reportsMixedSuccessAndFailurePerItem() {
+        ContentServiceImpl service = contentServiceWithWorkingSelf();
+
+        Content submitted = Content.builder().id(20L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("a.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
+        Content alreadyApproved = Content.builder().id(21L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("b.png").mediaType(MediaType.IMAGE).status(ContentStatus.APPROVED).version(1).build();
+        User otherBusiness = User.builder().id(99L).email("other@test.com").role(UserRole.BUSINESS).build();
+        Content notOwned = Content.builder().id(22L).creator(creator).campaign(campaign).business(otherBusiness)
+                .mediaUrl("c.png").mediaType(MediaType.IMAGE).status(ContentStatus.SUBMITTED).version(1).build();
+
+        when(contentRepository.findById(20L)).thenReturn(Optional.of(submitted));
+        when(contentRepository.findById(21L)).thenReturn(Optional.of(alreadyApproved));
+        when(contentRepository.findById(22L)).thenReturn(Optional.of(notOwned));
+        when(userRepository.getReferenceById(2L)).thenReturn(business);
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ContentBulkReviewResponse result = service.reviewBulk(2L,
+                new ContentBulkReviewRequest(List.of(20L, 21L, 22L), ContentStatus.APPROVED, "batch approve"));
+
+        assertThat(result.succeeded()).isEqualTo(1);
+        assertThat(result.failures()).hasSize(2);
+        assertThat(result.failures()).extracting("contentId").containsExactlyInAnyOrder(21L, 22L);
+        assertThat(submitted.getStatus()).isEqualTo(ContentStatus.APPROVED);
+        assertThat(alreadyApproved.getStatus()).isEqualTo(ContentStatus.APPROVED); // unchanged by the failed attempt
+        assertThat(notOwned.getBusiness()).isEqualTo(otherBusiness); // untouched
     }
 }

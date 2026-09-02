@@ -24,6 +24,7 @@ public interface CampaignMapper {
     @Mapping(target = "acceptingSubmissions", expression = "java(entity.isOpenForSubmissions())")
     @Mapping(target = "canChangeSchedule", expression = "java(RESCHEDULABLE_STATUSES.contains(entity.getEffectiveStatus()))")
     @Mapping(target = "hot", ignore = true)
+    @Mapping(target = "committedBudgetInr", ignore = true)
     CampaignResponse toResponse(Campaign entity);
 
     @Mapping(target = "changedByUserId", source = "changedBy.id")

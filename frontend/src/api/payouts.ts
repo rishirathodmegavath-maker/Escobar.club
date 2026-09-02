@@ -10,4 +10,8 @@ export const payoutsApi = {
       .then((r) => r.data),
   markPaid: (contentId: number, paidNote?: string) =>
     apiClient.patch<Payout>(`/content/${contentId}/payout/paid`, { paidNote }).then((r) => r.data),
+  exportCsv: (businessId: number, status?: PayoutStatus) =>
+    apiClient
+      .get<Blob>(`/businesses/${businessId}/payouts/export`, { params: { status }, responseType: "blob" })
+      .then((r) => r.data),
 };

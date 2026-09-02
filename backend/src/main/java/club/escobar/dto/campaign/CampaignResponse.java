@@ -24,6 +24,10 @@ public record CampaignResponse(
         boolean acceptingSubmissions,
         boolean urgent,
         boolean hot,
+        // Null means no cap set (unlimited). committedBudgetInr sums PENDING_KYC+PAYABLE+PAID
+        // payouts for this campaign - computed server-side, same pattern as `hot` below.
+        BigDecimal maxBudgetInr,
+        BigDecimal committedBudgetInr,
         ApprovalStatus approvalStatus,
         CampaignDisplayStatus adminDisplayStatus,
         // Computed server-side from effective status only (DRAFT/UPCOMING = true) - the frontend

@@ -17,6 +17,7 @@ export interface CampaignFormPayload {
   publishEndAt: string;
   ratePerThousandViewsInr: number;
   urgent: boolean;
+  maxBudgetInr: number | null;
 }
 
 export interface CampaignUpdatePayload extends CampaignFormPayload {

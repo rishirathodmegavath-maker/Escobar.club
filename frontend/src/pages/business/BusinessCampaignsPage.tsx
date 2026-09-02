@@ -30,6 +30,14 @@ const schema = z
     ratePerThousandViewsInr: z.coerce.number().min(100, "Rate must be at least ₹100 per 1,000 views"),
     status: z.enum(["DRAFT", "PUBLISHED", "CANCELLED"]).optional(),
     urgent: z.boolean().optional(),
+    // Left blank -> no cap (null), not zero - a blank field must never silently become a ₹0 budget
+    // that blocks every submission.
+    maxBudgetInr: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((v) => !v || (!Number.isNaN(Number(v)) && Number(v) >= 0), "Budget must be a positive number")
+      .transform((v) => (v ? Number(v) : null)),
   })
   .refine((data) => data.submissionDeadline >= data.submissionOpenAt, {
     message: "Submission deadline must be on or after submissions open",
@@ -97,6 +105,16 @@ function CampaignForm({
         error={errors.ratePerThousandViewsInr?.message}
         {...register("ratePerThousandViewsInr")}
       />
+      <Input
+        type="number"
+        step="0.01"
+        min={0}
+        label="Max budget (INR)"
+        placeholder="No cap"
+        hint="Optional - once payouts you owe reach this amount, the campaign stops accepting new submissions. Leave blank for no limit."
+        error={errors.maxBudgetInr?.message}
+        {...register("maxBudgetInr")}
+      />
       <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
         <input type="checkbox" className="focus-ring h-4 w-4 rounded border-ink-300" {...register("urgent")} />
         Mark as urgent (needs creators immediately — shows in the Hot tab on Discover)
@@ -139,6 +157,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
         status: (values.status ?? "PUBLISHED") as ManualCampaignStatus,
         urgent: values.urgent ?? false,
+        maxBudgetInr: values.maxBudgetInr,
       }),
     onSuccess: () => {
       push("Campaign updated", "success");
@@ -166,6 +185,14 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
             Submissions {campaign.submissionOpenAt} – {campaign.submissionDeadline} · Live {campaign.publishStartAt} –{" "}
             {campaign.publishEndAt} · {inrFormatter.format(campaign.ratePerThousandViewsInr)} / 1,000 views
           </p>
+          {campaign.maxBudgetInr != null && (
+            <p className="mt-1 font-mono text-xs text-ink-400">
+              Budget: {inrFormatter.format(campaign.committedBudgetInr ?? 0)} of {inrFormatter.format(campaign.maxBudgetInr)} committed
+              {!campaign.acceptingSubmissions && (campaign.committedBudgetInr ?? 0) >= campaign.maxBudgetInr && (
+                <span className="ml-1 font-sans font-semibold text-alert-700">— cap reached</span>
+              )}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {campaign.hot && (
@@ -193,6 +220,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
               ratePerThousandViewsInr: campaign.ratePerThousandViewsInr,
               status: campaign.status === "DRAFT" || campaign.status === "CANCELLED" ? campaign.status : "PUBLISHED",
               urgent: campaign.urgent,
+              maxBudgetInr: campaign.maxBudgetInr,
             }}
             onSubmit={(values) => updateMutation.mutate(values)}
           />
@@ -264,6 +292,7 @@ export function BusinessCampaignsPage() {
         publishEndAt: values.publishEndAt,
         ratePerThousandViewsInr: values.ratePerThousandViewsInr,
         urgent: values.urgent ?? false,
+        maxBudgetInr: values.maxBudgetInr,
       }),
     onSuccess: () => {
       push("Campaign created", "success");

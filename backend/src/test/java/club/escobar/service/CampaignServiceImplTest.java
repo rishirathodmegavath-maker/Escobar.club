@@ -19,6 +19,7 @@ import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
 import club.escobar.repository.ContentRepository;
+import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.CampaignServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,8 @@ class CampaignServiceImplTest {
     @Mock
     private ContentRepository contentRepository;
     @Mock
+    private PayoutRepository payoutRepository;
+    @Mock
     private CampaignMapper campaignMapper;
 
     @InjectMocks
@@ -70,7 +73,7 @@ class CampaignServiceImplTest {
     private CampaignCreateRequest createRequest(LocalDate submissionOpenAt, LocalDate submissionDeadline,
                                                   LocalDate publishStartAt, LocalDate publishEndAt) {
         return new CampaignCreateRequest("Launch", "desc", submissionOpenAt, submissionDeadline,
-                publishStartAt, publishEndAt, new BigDecimal("100.00"), false);
+                publishStartAt, publishEndAt, new BigDecimal("100.00"), false, null);
     }
 
     @Test
@@ -136,7 +139,7 @@ class CampaignServiceImplTest {
 
         assertThatThrownBy(() -> campaignService.update(999L, 5L, new CampaignUpdateRequest("Launch", "desc",
                 LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
-                new BigDecimal("100.00"), CampaignStatus.PUBLISHED, false)))
+                new BigDecimal("100.00"), CampaignStatus.PUBLISHED, false, null)))
                 .isInstanceOf(ForbiddenActionException.class);
     }
 
@@ -150,7 +153,7 @@ class CampaignServiceImplTest {
 
         assertThatThrownBy(() -> campaignService.update(2L, 5L, new CampaignUpdateRequest("Launch", "desc",
                 LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
-                new BigDecimal("100.00"), CampaignStatus.LIVE, false)))
+                new BigDecimal("100.00"), CampaignStatus.LIVE, false, null)))
                 .isInstanceOf(InvalidStateTransitionException.class);
     }
 
@@ -166,7 +169,7 @@ class CampaignServiceImplTest {
 
         campaignService.update(2L, 5L, new CampaignUpdateRequest("Launch", "desc",
                 LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
-                new BigDecimal("150.00"), CampaignStatus.PUBLISHED, false));
+                new BigDecimal("150.00"), CampaignStatus.PUBLISHED, false, null));
 
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.PUBLISHED);
         assertThat(campaign.getRatePerThousandViewsInr()).isEqualByComparingTo(new BigDecimal("150.00"));

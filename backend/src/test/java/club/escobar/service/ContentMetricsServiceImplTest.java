@@ -40,6 +40,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,7 +66,7 @@ class ContentMetricsServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        MetricsSyncProperties properties = new MetricsSyncProperties(15);
+        MetricsSyncProperties properties = new MetricsSyncProperties(15, true, 1_800_000L, 25);
         service = new ContentMetricsServiceImpl(contentRepository, contentMetricsSnapshotRepository,
                 apifyInstagramClient, properties, contentMetricsMapper, payoutService);
 
@@ -158,6 +159,28 @@ class ContentMetricsServiceImplTest {
 
         verify(apifyInstagramClient).fetchPostMetrics(publishedContent.getPostUrl());
         verify(payoutService).recalculate(20L);
+    }
+
+    @Test
+    void syncDueMetrics_oneItemFailingDoesNotStopTheRestOfTheBatch() {
+        Content secondContent = Content.builder().id(21L).creator(creator).campaign(campaign).business(business)
+                .mediaUrl("post2.png").mediaType(MediaType.IMAGE).status(ContentStatus.PUBLISHED)
+                .postUrl("https://www.instagram.com/p/Cxyz999/").version(1).build();
+
+        when(contentRepository.findDueForMetricsSync(eq(ContentStatus.PUBLISHED), any(Instant.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(publishedContent, secondContent)));
+        when(apifyInstagramClient.fetchPostMetrics(publishedContent.getPostUrl()))
+                .thenThrow(new RuntimeException("Apify request failed"));
+        when(apifyInstagramClient.fetchPostMetrics(secondContent.getPostUrl()))
+                .thenReturn(new ApifyPostMetrics(5L, 1L, 6000L, "{}"));
+        when(contentRepository.save(any(Content.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.syncDueMetrics(25);
+
+        assertThat(publishedContent.getMetricsSnapshots()).isEmpty();
+        assertThat(secondContent.getMetricsSnapshots()).hasSize(1);
+        verify(payoutService, never()).recalculate(20L);
+        verify(payoutService).recalculate(21L);
     }
 
     @Test

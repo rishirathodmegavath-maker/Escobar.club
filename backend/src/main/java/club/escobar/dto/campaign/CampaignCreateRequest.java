@@ -16,6 +16,9 @@ public record CampaignCreateRequest(
         @NotNull LocalDate publishStartAt,
         @NotNull LocalDate publishEndAt,
         @NotNull @DecimalMin(value = "100", message = "Rate must be at least ₹100 per 1,000 views") BigDecimal ratePerThousandViewsInr,
-        boolean urgent
+        boolean urgent,
+        // Optional total spend ceiling; null means unlimited. Once committed payouts reach this
+        // amount, the campaign stops accepting new submissions - see ContentServiceImpl.submit().
+        @DecimalMin(value = "0", message = "Budget cannot be negative") BigDecimal maxBudgetInr
 ) {
 }

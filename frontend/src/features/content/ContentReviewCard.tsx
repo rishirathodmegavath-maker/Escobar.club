@@ -13,7 +13,8 @@ import { contentApi } from "@/api/content";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
-import { ChevronRightIcon, VideoIcon } from "@/components/icons";
+import { CheckIcon, ChevronRightIcon, VideoIcon } from "@/components/icons";
+import clsx from "clsx";
 
 type ReviewDecision = "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
@@ -23,7 +24,17 @@ const decisionCopy: Record<ReviewDecision, string> = {
   CHANGES_REQUESTED: "sent back for changes",
 };
 
-export function ContentReviewCard({ content }: { content: ContentRecord }) {
+export function ContentReviewCard({
+  content,
+  selectable,
+  selected,
+  onToggleSelect,
+}: {
+  content: ContentRecord;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
   const [note, setNote] = useState("");
@@ -59,6 +70,32 @@ export function ContentReviewCard({ content }: { content: ContentRecord }) {
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-signal-500 to-signal-800">
             <VideoIcon className="h-8 w-8 text-white/90" />
           </div>
+        )}
+        {selectable && content.status === "SUBMITTED" && (
+          // A <span role="checkbox"> rather than a real <button> - this whole thumbnail is already a
+          // <button>, and nested buttons are invalid HTML with unpredictable click behavior.
+          <span
+            role="checkbox"
+            aria-checked={selected}
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect?.();
+              }
+            }}
+            className={clsx(
+              "focus-ring absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors",
+              selected ? "border-signal-500 bg-signal-500 text-white" : "border-white/80 bg-black/20 hover:bg-black/40",
+            )}
+          >
+            {selected && <CheckIcon className="h-3.5 w-3.5" />}
+          </span>
         )}
         <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 via-black/10 to-transparent p-2.5">
           <Avatar name={content.creatorDisplayName} imageUrl={content.creatorProfilePictureUrl} size={22} />

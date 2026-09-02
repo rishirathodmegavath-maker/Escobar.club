@@ -12,6 +12,7 @@ import club.escobar.entity.CampaignScheduleChange;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.CampaignStatus;
+import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
@@ -21,6 +22,7 @@ import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
 import club.escobar.repository.ContentRepository;
+import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.CampaignService;
 import lombok.RequiredArgsConstructor;
@@ -53,12 +55,17 @@ public class CampaignServiceImpl implements CampaignService {
     // should be reactivated via the general edit first if the business wants to relaunch them.
     private static final Set<CampaignStatus> RESCHEDULABLE_STATUSES =
             EnumSet.of(CampaignStatus.DRAFT, CampaignStatus.UPCOMING);
+    // "Committed" spend for the budget cap - everything except BELOW_THRESHOLD, which always
+    // carries a zero amount anyway. Kept as one definition shared by every place that checks it.
+    private static final Set<PayoutStatus> COMMITTED_PAYOUT_STATUSES =
+            EnumSet.of(PayoutStatus.PENDING_KYC, PayoutStatus.PAYABLE, PayoutStatus.PAID);
 
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
     private final BusinessProfileRepository businessProfileRepository;
     private final CampaignScheduleChangeRepository campaignScheduleChangeRepository;
     private final ContentRepository contentRepository;
+    private final PayoutRepository payoutRepository;
     private final CampaignMapper campaignMapper;
 
     @Override
@@ -91,10 +98,11 @@ public class CampaignServiceImpl implements CampaignService {
                 .ratePerThousandViewsInr(request.ratePerThousandViewsInr())
                 .status(CampaignStatus.PUBLISHED)
                 .urgent(request.urgent())
+                .maxBudgetInr(request.maxBudgetInr())
                 .build());
 
         log.info("Business id={} created campaign id={}", businessUserId, campaign.getId());
-        return campaignMapper.toResponse(campaign);
+        return withBudget(campaign, campaignMapper.toResponse(campaign), true);
     }
 
     @Override
@@ -120,10 +128,11 @@ public class CampaignServiceImpl implements CampaignService {
         campaign.setRatePerThousandViewsInr(request.ratePerThousandViewsInr());
         campaign.setStatus(request.status());
         campaign.setUrgent(request.urgent());
+        campaign.setMaxBudgetInr(request.maxBudgetInr());
 
         Campaign saved = campaignRepository.save(campaign);
         log.info("Business id={} updated campaign id={} (status={})", businessUserId, campaignId, request.status());
-        return campaignMapper.toResponse(saved);
+        return withBudget(saved, campaignMapper.toResponse(saved), true);
     }
 
     @Override
@@ -186,7 +195,8 @@ public class CampaignServiceImpl implements CampaignService {
 
         Campaign saved = campaignRepository.save(campaign);
         log.info("Business id={} changed schedule for campaign id={}", businessUserId, campaignId);
-        return withHot(campaignMapper.toResponse(saved), saved.isHot(computeActiveRateThreshold()));
+        CampaignResponse response = withHot(campaignMapper.toResponse(saved), saved.isHot(computeActiveRateThreshold()));
+        return withBudget(saved, response, true);
     }
 
     @Override
@@ -228,11 +238,11 @@ public class CampaignServiceImpl implements CampaignService {
                         .toList();
             }
             return PageResponse.of(paginate(matches, pageable)
-                    .map(c -> withHot(campaignMapper.toResponse(c), forceHot || c.isHot(rateThreshold))));
+                    .map(c -> withBudget(c, withHot(campaignMapper.toResponse(c), forceHot || c.isHot(rateThreshold)), false)));
         }
 
         Page<Campaign> page = campaignRepository.searchPublic(normalizedSearch, pageable);
-        return PageResponse.of(page.map(c -> withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold))));
+        return PageResponse.of(page.map(c -> withBudget(c, withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)), false)));
     }
 
     // Null for the default/no-category listing, which falls back to the plain searchPublic() page.
@@ -258,7 +268,7 @@ public class CampaignServiceImpl implements CampaignService {
     public PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable) {
         BigDecimal rateThreshold = computeActiveRateThreshold();
         Page<CampaignResponse> page = campaignRepository.findByBusiness_Id(businessUserId, pageable)
-                .map(c -> withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)));
+                .map(c -> withBudget(c, withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)), true));
         return PageResponse.of(page);
     }
 
@@ -267,8 +277,33 @@ public class CampaignServiceImpl implements CampaignService {
                 response.businessLogoUrl(), response.title(), response.description(),
                 response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
                 response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
-                response.acceptingSubmissions(), response.urgent(), hot, response.approvalStatus(),
-                response.adminDisplayStatus(), response.canChangeSchedule(), response.createdAt(), response.updatedAt());
+                response.acceptingSubmissions(), response.urgent(), hot,
+                response.maxBudgetInr(), response.committedBudgetInr(),
+                response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
+                response.createdAt(), response.updatedAt());
+    }
+
+    // Recomputes acceptingSubmissions to account for the budget cap (isOpenForSubmissions() alone
+    // only knows about dates), and only includes the actual ₹ figures when exposeBudget is true -
+    // the public/creator-facing endpoints (listPublic, getById) get an accurate accepting flag
+    // without leaking a business's internal budget numbers.
+    private CampaignResponse withBudget(Campaign entity, CampaignResponse response, boolean exposeBudget) {
+        BigDecimal committed = BigDecimal.ZERO;
+        boolean budgetExhausted = false;
+        if (entity.getMaxBudgetInr() != null) {
+            committed = payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(entity.getId(), COMMITTED_PAYOUT_STATUSES);
+            budgetExhausted = committed.compareTo(entity.getMaxBudgetInr()) >= 0;
+        }
+        boolean accepting = response.acceptingSubmissions() && !budgetExhausted;
+        return new CampaignResponse(response.id(), response.businessId(), response.businessCompanyName(),
+                response.businessLogoUrl(), response.title(), response.description(),
+                response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
+                response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
+                accepting, response.urgent(), response.hot(),
+                exposeBudget ? entity.getMaxBudgetInr() : null,
+                exposeBudget ? committed : null,
+                response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
+                response.createdAt(), response.updatedAt());
     }
 
     // Top-quartile rate among campaigns currently open for creator submissions, used as one of the
@@ -293,7 +328,10 @@ public class CampaignServiceImpl implements CampaignService {
     @Transactional(readOnly = true)
     public CampaignResponse getById(Long campaignId) {
         Campaign campaign = findById(campaignId);
-        return withHot(campaignMapper.toResponse(campaign), campaign.isHot(computeActiveRateThreshold()));
+        CampaignResponse response = withHot(campaignMapper.toResponse(campaign), campaign.isHot(computeActiveRateThreshold()));
+        // Public/unauthenticated endpoint (shared by creators and businesses alike) - never expose
+        // a business's internal budget numbers here, same as listPublic().
+        return withBudget(campaign, response, false);
     }
 
     private Campaign findById(Long campaignId) {

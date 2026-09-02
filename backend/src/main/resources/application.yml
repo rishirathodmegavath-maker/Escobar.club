@@ -49,6 +49,9 @@ app:
     timeout-ms: ${APIFY_TIMEOUT_MS:120000}
   metrics-sync:
     min-interval-minutes: ${METRICS_SYNC_MIN_INTERVAL_MINUTES:15}
+    scheduler-enabled: ${METRICS_SYNC_SCHEDULER_ENABLED:true}
+    scheduler-fixed-delay-ms: ${METRICS_SYNC_SCHEDULER_FIXED_DELAY_MS:1800000}
+    scheduler-batch-size: ${METRICS_SYNC_SCHEDULER_BATCH_SIZE:25}
   oauth:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}

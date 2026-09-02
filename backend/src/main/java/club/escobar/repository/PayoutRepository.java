@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface PayoutRepository extends JpaRepository<Payout, Long> {
@@ -28,4 +29,13 @@ public interface PayoutRepository extends JpaRepository<Payout, Long> {
             where p.business.id = :businessId and p.status = :status
             """)
     BigDecimal sumAmountInrByBusiness_IdAndStatus(@Param("businessId") Long businessId, @Param("status") PayoutStatus status);
+
+    // Used by the campaign budget cap check - "committed" spend is whatever isn't BELOW_THRESHOLD
+    // (that status always carries a zero amount anyway), passed in by the caller so the definition
+    // of "committed" lives in one place (ContentServiceImpl) rather than being duplicated here.
+    @Query("""
+            select coalesce(sum(p.amountInr), 0) from Payout p
+            where p.campaign.id = :campaignId and p.status in :statuses
+            """)
+    BigDecimal sumAmountInrByCampaign_IdAndStatusIn(@Param("campaignId") Long campaignId, @Param("statuses") Collection<PayoutStatus> statuses);
 }

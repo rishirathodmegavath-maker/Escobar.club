@@ -107,6 +107,11 @@ export interface Campaign {
   acceptingSubmissions: boolean;
   urgent: boolean;
   hot: boolean;
+  // Null means no cap set (unlimited). Both are only populated for the owning business - a public
+  // listing (Discover, campaign detail) never exposes a business's internal budget numbers, though
+  // acceptingSubmissions above still correctly reflects a budget-exhausted campaign either way.
+  maxBudgetInr: number | null;
+  committedBudgetInr: number | null;
   approvalStatus: ApprovalStatus;
   adminDisplayStatus: CampaignDisplayStatus | null;
   // Computed server-side (true only for DRAFT/UPCOMING) - always gate the "Change Schedule" action

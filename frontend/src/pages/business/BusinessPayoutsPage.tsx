@@ -80,6 +80,8 @@ export function BusinessPayoutsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = parseStatusParam(searchParams.get("status"));
   const [page, setPage] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const { push } = useToast();
 
   const { data, isLoading } = useQuery({
     queryKey: ["business", "payouts", user?.id, status, page],
@@ -92,11 +94,36 @@ export function BusinessPayoutsPage() {
     setSearchParams(next ? { status: next } : { status: "ALL" }, { replace: true });
   };
 
+  const handleExport = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const blob = await payoutsApi.exportCsv(user.id, status);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "payouts.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      push(extractErrorMessage(err), "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-ink-900">Payouts</h1>
-        <p className="mt-1.5 text-ink-500">What you owe creators for published content, and what's already been paid.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-semibold text-ink-900">Payouts</h1>
+          <p className="mt-1.5 text-ink-500">What you owe creators for published content, and what's already been paid.</p>
+        </div>
+        <Button variant="secondary" size="sm" isLoading={exporting} onClick={handleExport}>
+          Export CSV
+        </Button>
       </div>
 
       <Tabs tabs={tabs} value={status} onChange={handleStatusChange} />

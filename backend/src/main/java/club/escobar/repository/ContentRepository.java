@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+
 public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByBusiness_Id(Long businessId, Pageable pageable);
@@ -23,6 +25,20 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     boolean existsByCreator_IdAndBusiness_Id(Long creatorId, Long businessId);
 
     boolean existsByCampaign_Id(Long campaignId);
+
+    // "Due for sync" = no metrics snapshot at all, or the latest one is older than the cutoff (the
+    // caller passes now-minus-minIntervalMinutes). Used by the scheduled refresh job so it never
+    // re-fetches content whose data is already fresh - the rate limit lives in this query, not in
+    // per-call bookkeeping.
+    @Query("""
+            SELECT c FROM Content c
+            WHERE c.status = :status
+            AND NOT EXISTS (
+                SELECT 1 FROM ContentMetricsSnapshot s
+                WHERE s.content = c AND s.fetchedAt > :cutoff
+            )
+            """)
+    Page<Content> findDueForMetricsSync(@Param("status") ContentStatus status, @Param("cutoff") Instant cutoff, Pageable pageable);
 
     // Ranks creators by the view count of the LATEST metrics snapshot per published content item
     // (not summed history), scoped to one business. The ROW_NUMBER() window function picks the

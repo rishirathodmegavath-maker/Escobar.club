@@ -95,7 +95,7 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
                 new HttpEntity<>(new CampaignCreateRequest(title, "Campaign description",
                         LocalDate.now().minusDays(1), LocalDate.now().plusDays(10),
                         LocalDate.now().plusDays(11), LocalDate.now().plusDays(40),
-                        new BigDecimal("100.00"), false),
+                        new BigDecimal("100.00"), false, null),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -177,7 +177,7 @@ class CampaignContentFlowIntegrationTest extends AbstractIntegrationTest {
                 new HttpEntity<>(new CampaignCreateRequest("Gamma Launch", "Campaign description",
                         LocalDate.now().plusDays(20), LocalDate.now().plusDays(25),
                         LocalDate.now().plusDays(26), LocalDate.now().plusDays(40),
-                        new BigDecimal("100.00"), false),
+                        new BigDecimal("100.00"), false, null),
                         authHeaders(businessAuth.accessToken())),
                 CampaignResponse.class);
         Long campaignId = createResponse.getBody().id();

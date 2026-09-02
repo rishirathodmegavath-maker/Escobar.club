@@ -1,6 +1,9 @@
 package club.escobar.service.impl;
 
 import club.escobar.dto.common.PageResponse;
+import club.escobar.dto.content.ContentBulkReviewRequest;
+import club.escobar.dto.content.ContentBulkReviewResponse;
+import club.escobar.dto.content.ContentBulkReviewFailure;
 import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentPublishRequest;
 import club.escobar.dto.content.ContentResponse;
@@ -12,6 +15,7 @@ import club.escobar.entity.ContentReviewNote;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ContentStatus;
 import club.escobar.entity.enums.KycStatus;
+import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
@@ -20,18 +24,23 @@ import club.escobar.mapper.ContentMapper;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
+import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.ContentService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -41,12 +50,23 @@ public class ContentServiceImpl implements ContentService {
     private static final Logger log = LoggerFactory.getLogger(ContentServiceImpl.class);
     private static final Set<ContentStatus> REVIEWABLE_DECISIONS =
             EnumSet.of(ContentStatus.APPROVED, ContentStatus.REJECTED, ContentStatus.CHANGES_REQUESTED);
+    // Mirrors CampaignServiceImpl.COMMITTED_PAYOUT_STATUSES - everything except BELOW_THRESHOLD,
+    // which always carries a zero amount anyway.
+    private static final Set<PayoutStatus> COMMITTED_PAYOUT_STATUSES =
+            EnumSet.of(PayoutStatus.PENDING_KYC, PayoutStatus.PAYABLE, PayoutStatus.PAID);
 
     private final ContentRepository contentRepository;
     private final CampaignRepository campaignRepository;
     private final UserRepository userRepository;
     private final CreatorKycProfileRepository creatorKycProfileRepository;
+    private final PayoutRepository payoutRepository;
     private final ContentMapper contentMapper;
+    // Self-injection so reviewBulk() can call review() through the Spring proxy (self.review(...))
+    // rather than this.review(...) - a plain self-call bypasses @Transactional entirely, which would
+    // mean one bad item in a batch could roll back or corrupt the isolation of the others. @Lazy
+    // breaks the circular-dependency-at-startup issue this pattern would otherwise cause.
+    @Lazy
+    private final ContentService self;
 
     @Override
     @Transactional
@@ -60,6 +80,13 @@ public class ContentServiceImpl implements ContentService {
 
         if (!campaign.isOpenForSubmissions()) {
             throw new InvalidStateTransitionException(campaign.submissionClosedReason());
+        }
+        if (campaign.getMaxBudgetInr() != null) {
+            BigDecimal committed = payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(campaign.getId(), COMMITTED_PAYOUT_STATUSES);
+            if (committed.compareTo(campaign.getMaxBudgetInr()) >= 0) {
+                throw new InvalidStateTransitionException(
+                        "This campaign has reached its budget cap and is no longer accepting submissions.");
+            }
         }
 
         Content content = Content.builder()
@@ -134,6 +161,27 @@ public class ContentServiceImpl implements ContentService {
         Content saved = contentRepository.save(content);
         log.info("Business id={} reviewed content id={} (v{}): {}", businessUserId, contentId, content.getVersion(), request.decision());
         return contentMapper.toResponse(saved);
+    }
+
+    // Deliberately not @Transactional: each self.review(...) call below runs in its own transaction
+    // (via the Spring proxy), so one item's failure rolls back only that item and never touches the
+    // others. Wrapping this whole method in one transaction would defeat that isolation.
+    @Override
+    public ContentBulkReviewResponse reviewBulk(Long businessUserId, ContentBulkReviewRequest request) {
+        int succeeded = 0;
+        List<ContentBulkReviewFailure> failures = new ArrayList<>();
+        ContentReviewRequest itemRequest = new ContentReviewRequest(request.decision(), request.note());
+        for (Long contentId : request.contentIds()) {
+            try {
+                self.review(businessUserId, contentId, itemRequest);
+                succeeded++;
+            } catch (ForbiddenActionException | InvalidStateTransitionException | ResourceNotFoundException ex) {
+                failures.add(new ContentBulkReviewFailure(contentId, ex.getMessage()));
+            }
+        }
+        log.info("Business id={} bulk-reviewed {} item(s): {} succeeded, {} failed",
+                businessUserId, request.contentIds().size(), succeeded, failures.size());
+        return new ContentBulkReviewResponse(succeeded, failures);
     }
 
     @Override

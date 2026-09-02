@@ -12,6 +12,16 @@ export interface ReviewContentPayload {
   note?: string;
 }
 
+export interface BulkReviewFailure {
+  contentId: number;
+  reason: string;
+}
+
+export interface BulkReviewResult {
+  succeeded: number;
+  failures: BulkReviewFailure[];
+}
+
 export interface UploadResult {
   url: string;
   contentType: string;
@@ -30,6 +40,10 @@ export const contentApi = {
     apiClient.patch<ContentRecord>(`/content/${contentId}`, payload).then((r) => r.data),
   review: (contentId: number, payload: ReviewContentPayload) =>
     apiClient.patch<ContentRecord>(`/content/${contentId}/review`, payload).then((r) => r.data),
+  reviewBulk: (contentIds: number[], payload: ReviewContentPayload) =>
+    apiClient
+      .patch<BulkReviewResult>("/content/review/bulk", { contentIds, ...payload })
+      .then((r) => r.data),
   publish: (contentId: number, postUrl: string) =>
     apiClient.patch<ContentRecord>(`/content/${contentId}/publish`, { postUrl }).then((r) => r.data),
   reviewQueue: (businessId: number, status?: ContentStatus, page = 0, size = 10) =>

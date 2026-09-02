@@ -51,7 +51,7 @@ class CampaignControllerTest {
     private CampaignResponse sampleResponse() {
         return new CampaignResponse(3L, 2L, "Acme Co", null, "Summer Launch", "desc",
                 LocalDate.now(), LocalDate.now().plusDays(5), LocalDate.now().plusDays(6), LocalDate.now().plusDays(20),
-                new BigDecimal("100.00"), CampaignStatus.PUBLISHED, true, false, false,
+                new BigDecimal("100.00"), CampaignStatus.PUBLISHED, true, false, false, null, null,
                 ApprovalStatus.APPROVED, null, false, Instant.now(), Instant.now());
     }
 

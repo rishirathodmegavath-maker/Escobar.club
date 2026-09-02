@@ -20,6 +20,8 @@ public record CampaignUpdateRequest(
         // Only DRAFT, PUBLISHED (i.e. "auto - let dates decide") and CANCELLED are valid here.
         // UPCOMING/LIVE/COMPLETED are computed and rejected if sent - see CampaignServiceImpl.
         @NotNull CampaignStatus status,
-        boolean urgent
+        boolean urgent,
+        // Optional total spend ceiling; null means unlimited. See CampaignCreateRequest.
+        @DecimalMin(value = "0", message = "Budget cannot be negative") BigDecimal maxBudgetInr
 ) {
 }

@@ -1,6 +1,8 @@
 package club.escobar.controller;
 
 import club.escobar.dto.common.PageResponse;
+import club.escobar.dto.content.ContentBulkReviewRequest;
+import club.escobar.dto.content.ContentBulkReviewResponse;
 import club.escobar.dto.content.ContentCreateRequest;
 import club.escobar.dto.content.ContentPublishRequest;
 import club.escobar.dto.content.ContentResponse;
@@ -51,6 +53,14 @@ public class ContentController {
             @PathVariable Long id,
             @Valid @RequestBody ContentReviewRequest request) {
         return ResponseEntity.ok(contentService.review(user.getId(), id, request));
+    }
+
+    @PatchMapping("/api/content/review/bulk")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ResponseEntity<ContentBulkReviewResponse> reviewBulk(
+            @AuthenticationPrincipal SecurityUser user,
+            @Valid @RequestBody ContentBulkReviewRequest request) {
+        return ResponseEntity.ok(contentService.reviewBulk(user.getId(), request));
     }
 
     @PatchMapping("/api/content/{id}/publish")

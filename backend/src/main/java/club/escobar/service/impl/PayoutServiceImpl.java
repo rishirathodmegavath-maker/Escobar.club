@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +115,18 @@ public class PayoutServiceImpl implements PayoutService {
                 ? payoutRepository.findByBusiness_IdAndStatus(businessId, status, pageable)
                 : payoutRepository.findByBusiness_Id(businessId, pageable);
         return PageResponse.of(page.map(payoutMapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PayoutResponse> listForBusinessAll(Long requestingUserId, Long businessId, PayoutStatus status) {
+        if (!requestingUserId.equals(businessId)) {
+            throw new ForbiddenActionException("You may only view your own payouts");
+        }
+        Page<Payout> page = status != null
+                ? payoutRepository.findByBusiness_IdAndStatus(businessId, status, Pageable.unpaged())
+                : payoutRepository.findByBusiness_Id(businessId, Pageable.unpaged());
+        return page.map(payoutMapper::toResponse).getContent();
     }
 
     @Override

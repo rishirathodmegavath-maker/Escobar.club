@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { contentApi } from "@/api/content";
 import { useAuth } from "@/auth/AuthContext";
+import { extractErrorMessage } from "@/api/client";
+import { useToast } from "@/components/Toast";
+import { Button } from "@/components/Button";
 import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { ImageStackIcon } from "@/components/icons";
@@ -31,6 +34,9 @@ export function BusinessContentReviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = parseStatusParam(searchParams.get("status"));
   const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const queryClient = useQueryClient();
+  const { push } = useToast();
 
   const { data, isLoading } = useQuery({
     queryKey: ["content", "review-queue", user?.id, status, page],
@@ -38,10 +44,44 @@ export function BusinessContentReviewPage() {
     enabled: !!user,
   });
 
+  // Bulk-select only makes sense within one tab/page's set of ids - stale selections from a
+  // previous view would silently apply a decision to the wrong content otherwise.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [status, page]);
+
   const handleStatusChange = (next: ContentStatus | undefined) => {
     setPage(0);
     setSearchParams(next ? { status: next } : { status: "ALL" }, { replace: true });
   };
+
+  const toggleSelect = (id: number) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkMutation = useMutation({
+    mutationFn: (decision: "APPROVED" | "REJECTED") => contentApi.reviewBulk(Array.from(selected), { decision }),
+    onSuccess: (result) => {
+      if (result.failures.length === 0) {
+        push(`${result.succeeded} item${result.succeeded === 1 ? "" : "s"} updated.`, "success");
+      } else {
+        push(
+          `${result.succeeded} updated, ${result.failures.length} failed (${result.failures[0].reason}${result.failures.length > 1 ? ", …" : ""}).`,
+          result.succeeded > 0 ? "success" : "error",
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["content", "review-queue"] });
+      setSelected(new Set());
+    },
+    onError: (err) => push(extractErrorMessage(err), "error"),
+  });
+
+  const canBulkReview = status === "SUBMITTED";
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,6 +92,23 @@ export function BusinessContentReviewPage() {
 
       <Tabs tabs={tabs} value={status} onChange={handleStatusChange} />
 
+      {canBulkReview && selected.size > 0 && (
+        <div className="card-surface flex items-center justify-between gap-3 p-3.5">
+          <span className="text-sm font-medium text-ink-700">{selected.size} selected</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" isLoading={bulkMutation.isPending} onClick={() => bulkMutation.mutate("APPROVED")}>
+              Approve all
+            </Button>
+            <Button size="sm" variant="danger" isLoading={bulkMutation.isPending} onClick={() => bulkMutation.mutate("REJECTED")}>
+              Reject all
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <FullPageSpinner />
       ) : !data || data.content.length === 0 ? (
@@ -59,7 +116,13 @@ export function BusinessContentReviewPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
           {data.content.map((item) => (
-            <ContentReviewCard key={item.id} content={item} />
+            <ContentReviewCard
+              key={item.id}
+              content={item}
+              selectable={canBulkReview}
+              selected={selected.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
+            />
           ))}
         </div>
       )}

@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,6 +72,32 @@ public class ContentMetricsServiceImpl implements ContentMetricsService {
                     }
                 });
 
+        ContentMetricsSnapshot snapshot = applySnapshot(content);
+        log.info("User id={} synced metrics for content id={}: likes={} comments={} views={}",
+                requestingUserId, contentId, snapshot.getLikeCount(), snapshot.getCommentCount(), snapshot.getViewCount());
+        return contentMetricsMapper.toResponse(snapshot);
+    }
+
+    @Override
+    @Transactional
+    public void syncDueMetrics(int batchSize) {
+        Instant cutoff = Instant.now().minus(metricsSyncProperties.minIntervalMinutes(), ChronoUnit.MINUTES);
+        Page<Content> due = contentRepository.findDueForMetricsSync(ContentStatus.PUBLISHED, cutoff, PageRequest.of(0, batchSize));
+        for (Content content : due.getContent()) {
+            try {
+                applySnapshot(content);
+            } catch (Exception ex) {
+                // One post's Apify failure (deleted post, transient network error, etc.) must not
+                // stop the rest of the batch from refreshing.
+                log.warn("Scheduled metrics sync failed for content id={}: {}", content.getId(), ex.getMessage());
+            }
+        }
+        log.info("Scheduled metrics sync processed {} content item(s)", due.getContent().size());
+    }
+
+    // Shared by the user-triggered syncMetrics() and the scheduled syncDueMetrics() - fetches fresh
+    // metrics, appends a new snapshot (history is never overwritten), and recalculates the payout.
+    private ContentMetricsSnapshot applySnapshot(Content content) {
         ApifyPostMetrics metrics = apifyInstagramClient.fetchPostMetrics(content.getPostUrl());
 
         ContentMetricsSnapshot snapshot = ContentMetricsSnapshot.builder()
@@ -81,11 +108,8 @@ public class ContentMetricsServiceImpl implements ContentMetricsService {
                 .build();
         content.addMetricsSnapshot(snapshot);
         contentRepository.save(content);
-        payoutService.recalculate(contentId);
-
-        log.info("User id={} synced metrics for content id={}: likes={} comments={} views={}",
-                requestingUserId, contentId, metrics.likeCount(), metrics.commentCount(), metrics.viewCount());
-        return contentMetricsMapper.toResponse(snapshot);
+        payoutService.recalculate(content.getId());
+        return snapshot;
     }
 
     @Override

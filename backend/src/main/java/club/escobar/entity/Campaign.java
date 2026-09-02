@@ -59,6 +59,13 @@ public class Campaign {
     @Column(name = "rate_per_thousand_views_inr", nullable = false, precision = 12, scale = 2)
     private BigDecimal ratePerThousandViewsInr;
 
+    // Optional total spend ceiling for this campaign. Null means unlimited (today's behavior).
+    // Gates NEW submissions only, once committed payouts (PENDING_KYC+PAYABLE+PAID) reach this
+    // amount - it never claws back or caps a payout already earned by a creator. See
+    // ContentServiceImpl.submit().
+    @Column(name = "max_budget_inr", precision = 12, scale = 2)
+    private BigDecimal maxBudgetInr;
+
     // Only DRAFT/CANCELLED/PUBLISHED are ever persisted here. PUBLISHED means "governed by dates" -
     // getEffectiveStatus() resolves it to UPCOMING/LIVE/COMPLETED at read time so the lifecycle can
     // never go stale the way a manually-picked status could.
