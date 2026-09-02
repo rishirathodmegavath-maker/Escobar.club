@@ -57,7 +57,7 @@ export function BusinessContentReviewPage() {
       ) : !data || data.content.length === 0 ? (
         <EmptyState icon={<ImageStackIcon className="h-10 w-10" />} title="Nothing here" description="Check back once creators submit content." />
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
           {data.content.map((item) => (
             <ContentReviewCard key={item.id} content={item} />
           ))}

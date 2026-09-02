@@ -13,7 +13,7 @@ import { contentApi } from "@/api/content";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
-import { ChevronRightIcon } from "@/components/icons";
+import { ChevronRightIcon, VideoIcon } from "@/components/icons";
 
 type ReviewDecision = "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
@@ -24,6 +24,7 @@ const decisionCopy: Record<ReviewDecision, string> = {
 };
 
 export function ContentReviewCard({ content }: { content: ContentRecord }) {
+  const [expanded, setExpanded] = useState(false);
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
   const [note, setNote] = useState("");
   const queryClient = useQueryClient();
@@ -41,19 +42,58 @@ export function ContentReviewCard({ content }: { content: ContentRecord }) {
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
 
-  return (
-    <div className="card-surface flex flex-col gap-4 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <Link to={`/business/creators/${content.creatorId}`} className="focus-ring flex items-center gap-3">
-          <Avatar name={content.creatorDisplayName} imageUrl={content.creatorProfilePictureUrl} size={40} />
-          <div>
-            <span className="flex items-center gap-1.5 font-display text-lg font-semibold text-ink-900 hover:text-signal-700">
-              {content.creatorDisplayName}
-              <ChevronRightIcon className="h-4 w-4 text-ink-300" />
-            </span>
-            <p className="text-xs text-ink-400">Version {content.version}</p>
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="focus-ring group relative flex aspect-square flex-col overflow-hidden rounded-2xl border border-ink-100 bg-surface-1 text-left shadow-sm transition hover:shadow-md"
+      >
+        {content.mediaType === "IMAGE" ? (
+          <img
+            src={content.mediaUrl}
+            alt=""
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-signal-500 to-signal-800">
+            <VideoIcon className="h-8 w-8 text-white/90" />
           </div>
-        </Link>
+        )}
+        <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 via-black/10 to-transparent p-2.5">
+          <Avatar name={content.creatorDisplayName} imageUrl={content.creatorProfilePictureUrl} size={22} />
+          <span className="truncate text-xs font-medium text-white">{content.creatorDisplayName}</span>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent p-2.5">
+          <StatusPill status={content.status} />
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="card-surface col-span-full flex flex-col gap-4 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink-100 text-ink-400 hover:bg-surface-hover hover:text-ink-700"
+            aria-label="Collapse"
+          >
+            <ChevronRightIcon className="h-4 w-4 rotate-180" />
+          </button>
+          <Link to={`/business/creators/${content.creatorId}`} className="focus-ring flex items-center gap-3">
+            <Avatar name={content.creatorDisplayName} imageUrl={content.creatorProfilePictureUrl} size={40} />
+            <div>
+              <span className="flex items-center gap-1.5 font-display text-lg font-semibold text-ink-900 hover:text-signal-700">
+                {content.creatorDisplayName}
+                <ChevronRightIcon className="h-4 w-4 text-ink-300" />
+              </span>
+              <p className="text-xs text-ink-400">Version {content.version}</p>
+            </div>
+          </Link>
+        </div>
         <StatusPill status={content.status} />
       </div>
 
