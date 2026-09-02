@@ -15,6 +15,7 @@ import { contentApi } from "@/api/content";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
+import { VideoIcon } from "@/components/icons";
 
 export function ContentCard({ content }: { content: ContentRecord }) {
   const [expanded, setExpanded] = useState(false);
@@ -41,10 +42,39 @@ export function ContentCard({ content }: { content: ContentRecord }) {
     onError: (err) => setError(extractErrorMessage(err, "Could not resubmit content")),
   });
 
-  return (
-    <div className="card-surface flex flex-col gap-4 p-6">
+  if (!expanded) {
+    return (
       <button
-        onClick={() => setExpanded((v) => !v)}
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="focus-ring group relative flex aspect-square flex-col overflow-hidden rounded-2xl border border-ink-100 bg-surface-1 text-left shadow-sm transition hover:shadow-md"
+      >
+        {content.mediaType === "IMAGE" ? (
+          <img
+            src={content.mediaUrl}
+            alt=""
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-signal-500 to-signal-800">
+            <VideoIcon className="h-8 w-8 text-white/90" />
+          </div>
+        )}
+        <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 via-black/10 to-transparent p-2.5">
+          <Avatar name={content.businessCompanyName} imageUrl={content.businessLogoUrl} size={22} />
+          <span className="truncate text-xs font-medium text-white">{content.campaignTitle}</span>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent p-2.5">
+          <StatusPill status={content.status} />
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="card-surface col-span-full mx-auto flex w-full max-w-2xl flex-col gap-4 p-6">
+      <button
+        onClick={() => setExpanded(false)}
         className="focus-ring flex items-start justify-between gap-4 text-left"
       >
         <div className="flex items-center gap-3">
@@ -62,63 +92,59 @@ export function ContentCard({ content }: { content: ContentRecord }) {
         <StatusPill status={content.status} />
       </button>
 
-      {expanded && (
+      {!editing && (
         <>
-          {!editing && (
-            <>
-              {content.mediaType === "IMAGE" ? (
-                <img src={content.mediaUrl} alt="" className="max-h-64 w-full rounded-lg object-cover" />
-              ) : (
-                <video src={content.mediaUrl} controls className="max-h-64 w-full rounded-lg" />
-              )}
-              {content.caption && <p className="text-sm text-ink-600">{content.caption}</p>}
-            </>
+          {content.mediaType === "IMAGE" ? (
+            <img src={content.mediaUrl} alt="" className="max-h-64 w-full rounded-lg object-cover" />
+          ) : (
+            <video src={content.mediaUrl} controls className="max-h-64 w-full rounded-lg" />
           )}
-
-          {content.status === "CHANGES_REQUESTED" && (
-            <div className="border-t border-ink-100 pt-4">
-              {editing ? (
-                <div className="flex flex-col gap-4">
-                  {error && (
-                    <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
-                      {error}
-                    </div>
-                  )}
-                  <MediaUploadField value={media} onChange={setMedia} />
-                  <TextArea label="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
-                  <div className="flex gap-2">
-                    <Button isLoading={mutation.isPending} onClick={() => mutation.mutate()}>
-                      Resubmit for review
-                    </Button>
-                    <Button variant="ghost" onClick={() => setEditing(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button variant="gold" onClick={() => setEditing(true)}>
-                  Edit &amp; resubmit
-                </Button>
-              )}
-            </div>
-          )}
-
-          {content.status === "APPROVED" && <PublishContentForm content={content} />}
-
-          <PublishedLinkStatus content={content} />
-
-          {content.status === "PUBLISHED" && (
-            <>
-              <ContentMetricsPanel content={content} />
-              <PayoutPanel content={content} />
-            </>
-          )}
-
-          <div className="border-t border-ink-100 pt-4">
-            <ReviewNotesTimeline notes={content.reviewNotes} />
-          </div>
+          {content.caption && <p className="text-sm text-ink-600">{content.caption}</p>}
         </>
       )}
+
+      {content.status === "CHANGES_REQUESTED" && (
+        <div className="border-t border-ink-100 pt-4">
+          {editing ? (
+            <div className="flex flex-col gap-4">
+              {error && (
+                <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                  {error}
+                </div>
+              )}
+              <MediaUploadField value={media} onChange={setMedia} />
+              <TextArea label="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
+              <div className="flex gap-2">
+                <Button isLoading={mutation.isPending} onClick={() => mutation.mutate()}>
+                  Resubmit for review
+                </Button>
+                <Button variant="ghost" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="gold" onClick={() => setEditing(true)}>
+              Edit &amp; resubmit
+            </Button>
+          )}
+        </div>
+      )}
+
+      {content.status === "APPROVED" && <PublishContentForm content={content} />}
+
+      <PublishedLinkStatus content={content} />
+
+      {content.status === "PUBLISHED" && (
+        <>
+          <ContentMetricsPanel content={content} />
+          <PayoutPanel content={content} />
+        </>
+      )}
+
+      <div className="border-t border-ink-100 pt-4">
+        <ReviewNotesTimeline notes={content.reviewNotes} />
+      </div>
     </div>
   );
 }
