@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,6 +39,7 @@ export function BusinessProfilePage() {
   const { data, isLoading } = useQuery({ queryKey: ["business", "me"], queryFn: businessesApi.getMine });
   const queryClient = useQueryClient();
   const { push } = useToast();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -79,11 +81,12 @@ export function BusinessProfilePage() {
         logoUrl: values.logoUrl ?? "",
         website: values.website ?? "",
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       push("Company profile updated", "success");
-      queryClient.invalidateQueries({ queryKey: ["business", "me"] });
+      queryClient.setQueryData(["business", "me"], updated);
       draftsApi.remove(DRAFT_KEY).catch(() => {});
       dismissDraft();
+      navigate("/business/profile");
     },
     onError: (err) => push(extractErrorMessage(err), "error"),
   });

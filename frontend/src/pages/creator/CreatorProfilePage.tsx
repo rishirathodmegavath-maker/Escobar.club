@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useFieldArray, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,6 +48,7 @@ export function CreatorProfilePage() {
   const { data, isLoading } = useQuery({ queryKey: ["creator", "me"], queryFn: creatorsApi.getMine });
   const queryClient = useQueryClient();
   const { push } = useToast();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -105,11 +107,13 @@ export function CreatorProfilePage() {
         followerCount: values.followerCount,
         portfolioLinks: values.portfolioLinks.map((l) => l.value),
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       push("Profile updated", "success");
-      queryClient.invalidateQueries({ queryKey: ["creator", "me"] });
+      queryClient.setQueryData(["creator", "me"], updated);
+      queryClient.invalidateQueries({ queryKey: ["creator"] });
       draftsApi.remove(DRAFT_KEY).catch(() => {});
       dismissDraft();
+      navigate("/creator/profile");
     },
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
