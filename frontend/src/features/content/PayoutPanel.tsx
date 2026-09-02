@@ -10,7 +10,6 @@ import { StatusPill } from "@/components/StatusPill";
 import { useToast } from "@/components/Toast";
 
 const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-const ELIGIBILITY_THRESHOLD = 5000;
 
 export function PayoutPanel({ content }: { content: ContentRecord }) {
   const { user } = useAuth();
@@ -55,9 +54,11 @@ export function PayoutPanel({ content }: { content: ContentRecord }) {
 
       <div className="mt-3 flex items-center justify-between rounded-lg bg-paper-100 px-3 py-2.5">
         <div>
-          <p className="font-mono text-lg font-semibold text-ink-900">{inrFormatter.format(data.amountInr)}</p>
+          <p className="font-mono text-lg font-semibold text-ink-900">
+            {inrFormatter.format(data.amountInr)} ({data.viewCountUsed.toLocaleString()})
+          </p>
           <p className="font-mono text-xs text-ink-400">
-            {data.viewCountUsed.toLocaleString()} / {ELIGIBILITY_THRESHOLD.toLocaleString()} views
+            ({inrFormatter.format(data.rateUsed)} / 1,000 views)
           </p>
         </div>
         {data.status === "PAID" && data.paidAt && (
