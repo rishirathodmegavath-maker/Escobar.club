@@ -159,6 +159,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     enabled: user?.role === "CREATOR",
   });
   const avatarImageUrl = businessProfile?.logoUrl ?? creatorProfile?.profilePictureUrl;
+  const profilePath =
+    user?.role === "BUSINESS" ? "/business/profile" : user?.role === "CREATOR" ? "/creator/profile" : null;
 
   return (
     <div className="flex min-h-screen bg-paper">
@@ -333,15 +335,31 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <ChevronRightIcon className="h-4 w-4 rotate-180" />
             </button>
-            <button
-              type="button"
-              aria-label="Go forward"
-              title="Go forward"
-              onClick={() => navigate(1)}
-              className="focus-ring flex h-8 w-8 items-center justify-center rounded-lg border border-surface-border bg-surface text-ink-500 transition-colors hover:bg-surface-hover hover:text-ink-900"
-            >
-              <ChevronRightIcon className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Go forward"
+                title="Go forward"
+                onClick={() => navigate(1)}
+                className="focus-ring flex h-8 w-8 items-center justify-center rounded-lg border border-surface-border bg-surface text-ink-500 transition-colors hover:bg-surface-hover hover:text-ink-900"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </button>
+              {profilePath && (
+                <Link
+                  to={profilePath}
+                  aria-label="My profile"
+                  title="My profile"
+                  className="focus-ring flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-surface-border bg-surface text-ink-500 transition-colors hover:bg-surface-hover hover:text-ink-900"
+                >
+                  {avatarImageUrl ? (
+                    <img src={avatarImageUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-4 w-4" />
+                  )}
+                </Link>
+              )}
+            </div>
           </div>
           {children}
         </div>
