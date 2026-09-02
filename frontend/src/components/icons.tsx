@@ -170,6 +170,12 @@ export const MoonIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const MenuIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
+
 export const EditIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)}>
     <path d="M13.5 5.5l5 5L8 21H3v-5z" />
