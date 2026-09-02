@@ -5,6 +5,7 @@ import { Spinner } from "@/components/Spinner";
 import { CameraIcon, EyeIcon, ImageStackIcon, TrashIcon } from "@/components/icons";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { ImageViewerModal } from "@/components/ImageViewerModal";
+import { ensureBrowserRenderableImage } from "@/lib/heicConvert";
 
 interface ImageUploadFieldProps {
   label: string;
@@ -23,6 +24,7 @@ export function ImageUploadField({ label, value, onChange, uploadFn, shape = "sq
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingImageSrc, setPendingImageSrc] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -46,9 +48,18 @@ export function ImageUploadField({ label, value, onChange, uploadFn, shape = "sq
     }
   };
 
-  const handlePicked = (file: File) => {
+  const handlePicked = async (file: File) => {
     setMenuOpen(false);
-    setPendingImageSrc(URL.createObjectURL(file));
+    setError(null);
+    setConverting(true);
+    try {
+      const renderable = await ensureBrowserRenderableImage(file);
+      setPendingImageSrc(URL.createObjectURL(renderable));
+    } catch {
+      setError("Could not process this photo. Try a JPG or PNG instead.");
+    } finally {
+      setConverting(false);
+    }
   };
 
   const handleCropped = (blob: Blob) => {
@@ -80,7 +91,7 @@ export function ImageUploadField({ label, value, onChange, uploadFn, shape = "sq
             shape === "circle" ? "rounded-full" : "rounded-xl",
           )}
         >
-          {progress !== null ? (
+          {progress !== null || converting ? (
             <Spinner />
           ) : value ? (
             <img src={value} alt="" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
