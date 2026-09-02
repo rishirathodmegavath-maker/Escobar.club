@@ -22,6 +22,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     boolean existsByCreator_IdAndBusiness_Id(Long creatorId, Long businessId);
 
+    boolean existsByCampaign_Id(Long campaignId);
+
     // Ranks creators by the view count of the LATEST metrics snapshot per published content item
     // (not summed history), scoped to one business. The ROW_NUMBER() window function picks the
     // latest snapshot per content before the outer aggregation sums across a creator's content.

@@ -64,6 +64,15 @@ public class CampaignController {
         return ResponseEntity.ok(campaignService.update(user.getId(), id, request));
     }
 
+    @DeleteMapping("/api/campaigns/{id}")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal SecurityUser user,
+            @PathVariable Long id) {
+        campaignService.delete(user.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/api/campaigns/{id}/schedule")
     @PreAuthorize("hasRole('BUSINESS')")
     public ResponseEntity<CampaignResponse> updateSchedule(

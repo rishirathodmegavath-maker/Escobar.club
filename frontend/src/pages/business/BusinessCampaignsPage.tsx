@@ -145,6 +145,15 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
     onError: (err) => push(extractErrorMessage(err), "error"),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => campaignsApi.remove(campaign.id),
+    onSuccess: () => {
+      push("Campaign deleted", "success");
+      queryClient.invalidateQueries({ queryKey: ["campaigns", "mine"] });
+    },
+    onError: (err) => push(extractErrorMessage(err), "error"),
+  });
+
   return (
     <div className="card-surface flex flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-4">
@@ -202,6 +211,18 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
               📅 Change Schedule
             </Button>
           )}
+          <Button
+            variant="danger"
+            size="sm"
+            isLoading={deleteMutation.isPending}
+            onClick={() => {
+              if (window.confirm(`Delete "${campaign.title}"? This can't be undone.`)) {
+                deleteMutation.mutate();
+              }
+            }}
+          >
+            Delete
+          </Button>
         </div>
       )}
     </div>

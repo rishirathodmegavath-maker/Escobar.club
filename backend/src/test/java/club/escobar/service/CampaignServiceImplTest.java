@@ -18,6 +18,7 @@ import club.escobar.mapper.CampaignMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
+import club.escobar.repository.ContentRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.impl.CampaignServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,8 @@ class CampaignServiceImplTest {
     private BusinessProfileRepository businessProfileRepository;
     @Mock
     private CampaignScheduleChangeRepository campaignScheduleChangeRepository;
+    @Mock
+    private ContentRepository contentRepository;
     @Mock
     private CampaignMapper campaignMapper;
 
@@ -167,6 +170,49 @@ class CampaignServiceImplTest {
 
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.PUBLISHED);
         assertThat(campaign.getRatePerThousandViewsInr()).isEqualByComparingTo(new BigDecimal("150.00"));
+    }
+
+    // ---- delete() ----
+
+    @Test
+    void delete_removesCampaignWhenOwnerAndNoSubmissions() {
+        Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.DRAFT).build();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        when(contentRepository.existsByCampaign_Id(5L)).thenReturn(false);
+
+        campaignService.delete(2L, 5L);
+
+        verify(campaignRepository).delete(campaign);
+    }
+
+    @Test
+    void delete_rejectsWhenNotOwner() {
+        Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.DRAFT).build();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+
+        assertThatThrownBy(() -> campaignService.delete(999L, 5L))
+                .isInstanceOf(ForbiddenActionException.class);
+        verify(campaignRepository, never()).delete(any(Campaign.class));
+    }
+
+    @Test
+    void delete_rejectsWhenContentAlreadySubmitted() {
+        Campaign campaign = Campaign.builder().id(5L).business(business).title("Launch")
+                .submissionOpenAt(LocalDate.now()).submissionDeadline(LocalDate.now().plusDays(5))
+                .publishStartAt(LocalDate.now().plusDays(6)).publishEndAt(LocalDate.now().plusDays(20))
+                .ratePerThousandViewsInr(new BigDecimal("100.00")).status(CampaignStatus.PUBLISHED).build();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        when(contentRepository.existsByCampaign_Id(5L)).thenReturn(true);
+
+        assertThatThrownBy(() -> campaignService.delete(2L, 5L))
+                .isInstanceOf(InvalidStateTransitionException.class);
+        verify(campaignRepository, never()).delete(any(Campaign.class));
     }
 
     @Test

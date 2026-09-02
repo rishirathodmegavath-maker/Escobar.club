@@ -20,6 +20,7 @@ import club.escobar.mapper.CampaignMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
+import club.escobar.repository.ContentRepository;
 import club.escobar.repository.UserRepository;
 import club.escobar.service.CampaignService;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class CampaignServiceImpl implements CampaignService {
     private final UserRepository userRepository;
     private final BusinessProfileRepository businessProfileRepository;
     private final CampaignScheduleChangeRepository campaignScheduleChangeRepository;
+    private final ContentRepository contentRepository;
     private final CampaignMapper campaignMapper;
 
     @Override
@@ -122,6 +124,21 @@ public class CampaignServiceImpl implements CampaignService {
         Campaign saved = campaignRepository.save(campaign);
         log.info("Business id={} updated campaign id={} (status={})", businessUserId, campaignId, request.status());
         return campaignMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long businessUserId, Long campaignId) {
+        Campaign campaign = findById(campaignId);
+        if (!campaign.getBusiness().getId().equals(businessUserId)) {
+            throw new ForbiddenActionException("You may only delete your own campaigns");
+        }
+        if (contentRepository.existsByCampaign_Id(campaignId)) {
+            throw new InvalidStateTransitionException(
+                    "Cannot delete a campaign that already has creator submissions - cancel it instead");
+        }
+        campaignRepository.delete(campaign);
+        log.info("Business id={} deleted campaign id={}", businessUserId, campaignId);
     }
 
     @Override

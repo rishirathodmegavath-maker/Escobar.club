@@ -16,6 +16,11 @@ public interface CampaignService {
 
     CampaignResponse update(Long businessUserId, Long campaignId, CampaignUpdateRequest request);
 
+    // Hard delete, only allowed while no creator has submitted content against the campaign yet -
+    // once content exists, Content.campaign (nullable = false) would be left dangling. Businesses
+    // that need to stop a campaign with existing submissions should cancel it via update() instead.
+    void delete(Long businessUserId, Long campaignId);
+
     // Focused, dedicated "prepone/postpone" flow with its own safety rules (effective-status gate,
     // future-publishStartAt guard, audit trail) and its own frontend UX - deliberately kept separate
     // from the general update() above rather than retrofitting these rules onto it.

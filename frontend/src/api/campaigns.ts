@@ -42,6 +42,7 @@ export const campaignsApi = {
     apiClient.post<Campaign>("/campaigns", payload).then((r) => r.data),
   update: (id: number, payload: CampaignUpdatePayload) =>
     apiClient.put<Campaign>(`/campaigns/${id}`, payload).then((r) => r.data),
+  remove: (id: number) => apiClient.delete<void>(`/campaigns/${id}`).then((r) => r.data),
   updateSchedule: (id: number, payload: CampaignSchedulePayload) =>
     apiClient.patch<Campaign>(`/campaigns/${id}/schedule`, payload).then((r) => r.data),
   scheduleHistory: (id: number) =>
