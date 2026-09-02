@@ -6,6 +6,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { useTheme } from "@/theme/ThemeContext";
 import { businessesApi } from "@/api/businesses";
 import { creatorsApi } from "@/api/creators";
+import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { SignalMark } from "./SignalMark";
 import { AccountMenu, type AccountMenuItem } from "./AccountMenu";
@@ -159,6 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     enabled: user?.role === "CREATOR",
   });
   const avatarImageUrl = businessProfile?.logoUrl ?? creatorProfile?.profilePictureUrl;
+  const avatarName = businessProfile?.companyName ?? creatorProfile?.displayName ?? "";
   const profilePath =
     user?.role === "BUSINESS" ? "/business/profile" : user?.role === "CREATOR" ? "/creator/profile" : null;
 
@@ -358,18 +360,23 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <ChevronRightIcon className="h-4 w-4" />
               </button>
               {profilePath && (
-                <Link
-                  to={profilePath}
-                  aria-label="My profile"
-                  title="My profile"
-                  className="focus-ring flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-surface-border bg-surface text-ink-500 transition-colors hover:bg-surface-hover hover:text-ink-900"
-                >
-                  {avatarImageUrl ? (
-                    <img src={avatarImageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <UserIcon className="h-4 w-4" />
-                  )}
-                </Link>
+                <>
+                  <span aria-hidden="true" className="h-5 w-px bg-surface-border" />
+                  <Link
+                    to={profilePath}
+                    aria-label="My profile"
+                    title="My profile"
+                    className="focus-ring group flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-avatar ring-2 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-signal-300"
+                  >
+                    {avatarName ? (
+                      <Avatar name={avatarName} imageUrl={avatarImageUrl} size={34} />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center rounded-avatar bg-surface-hover text-ink-400">
+                        <UserIcon className="h-4 w-4" />
+                      </span>
+                    )}
+                  </Link>
+                </>
               )}
             </div>
           </div>
