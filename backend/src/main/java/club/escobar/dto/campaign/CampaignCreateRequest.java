@@ -15,7 +15,7 @@ public record CampaignCreateRequest(
         @NotNull LocalDate submissionDeadline,
         @NotNull LocalDate publishStartAt,
         @NotNull LocalDate publishEndAt,
-        @NotNull @DecimalMin("0.01") BigDecimal ratePerThousandViewsInr,
+        @NotNull @DecimalMin(value = "100", message = "Rate must be at least ₹100 per 1,000 views") BigDecimal ratePerThousandViewsInr,
         boolean urgent
 ) {
 }

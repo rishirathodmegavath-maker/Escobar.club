@@ -24,7 +24,7 @@ const schema = z
     submissionDeadline: z.string().min(1, "Submission deadline is required"),
     publishStartAt: z.string().min(1, "Publish start date is required"),
     publishEndAt: z.string().min(1, "Publish end date is required"),
-    ratePerThousandViewsInr: z.coerce.number().positive("Rate must be greater than zero"),
+    ratePerThousandViewsInr: z.coerce.number().min(100, "Rate must be at least ₹100 per 1,000 views"),
     status: z.enum(["DRAFT", "PUBLISHED", "CANCELLED"]).optional(),
     urgent: z.boolean().optional(),
   })
@@ -88,7 +88,9 @@ function CampaignForm({
       <Input
         type="number"
         step="0.01"
+        min={100}
         label="Rate per 1,000 views (INR)"
+        hint="Minimum ₹100 per 1,000 views"
         error={errors.ratePerThousandViewsInr?.message}
         {...register("ratePerThousandViewsInr")}
       />
