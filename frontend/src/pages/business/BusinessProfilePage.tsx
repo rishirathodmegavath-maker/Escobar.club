@@ -13,6 +13,7 @@ import { ImageUploadField } from "@/components/ImageUploadField";
 import { DraftRestoreBanner } from "@/components/DraftRestoreBanner";
 import { useDraftAutosave, useDraftRestore } from "@/hooks/useDraftAutosave";
 import { draftsApi } from "@/api/drafts";
+import { isUrlLike, normalizeUrl } from "@/lib/url";
 
 const DRAFT_KEY = "business-profile";
 
@@ -24,7 +25,12 @@ const schema = z.object({
   industry: z.string().max(80).optional().or(z.literal("")),
   description: z.string().max(4000).optional().or(z.literal("")),
   logoUrl: z.string().optional().or(z.literal("")),
-  website: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  website: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v ? normalizeUrl(v) : v))
+    .refine((v) => !v || isUrlLike(v), "Enter a valid website address"),
 });
 type FormValues = z.infer<typeof schema>;
 

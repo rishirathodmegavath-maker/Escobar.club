@@ -14,14 +14,19 @@ import { ImageUploadField } from "@/components/ImageUploadField";
 import { DraftRestoreBanner } from "@/components/DraftRestoreBanner";
 import { useDraftAutosave, useDraftRestore } from "@/hooks/useDraftAutosave";
 import { draftsApi } from "@/api/drafts";
+import { isUrlLike, normalizeUrl } from "@/lib/url";
 
 const DRAFT_KEY = "creator-profile";
 
-// z.string().url() would NOT reject javascript:/data:/vbscript: URIs - the WHATWG URL parser it's
-// built on treats those as syntactically valid URLs. This is a UX check only; the real boundary is
-// the backend's identical http(s)-only @Pattern on CreatorProfileUpdateRequest.portfolioLinks.
-const HTTP_URL_PATTERN = /^https?:\/\/.+/;
-const linkSchema = z.object({ value: z.string().regex(HTTP_URL_PATTERN, "Must start with http:// or https://") });
+// A link typed without a scheme (e.g. "instagram.com/handle") is normalized to https:// rather
+// than rejected - see @/lib/url. The real boundary is still the backend's identical http(s)-only
+// @Pattern on CreatorProfileUpdateRequest.portfolioLinks, which the normalized value always satisfies.
+const linkSchema = z.object({
+  value: z
+    .string()
+    .transform((v) => normalizeUrl(v))
+    .refine((v) => isUrlLike(v), "Enter a valid URL"),
+});
 const INSTAGRAM_PROFILE_PATTERN = /^https?:\/\/(www\.)?instagram\.com\/.+/;
 const schema = z.object({
   displayName: z.string().min(2).max(120),
@@ -29,7 +34,10 @@ const schema = z.object({
   profilePictureUrl: z.string().optional().or(z.literal("")),
   niche: z.string().max(80).optional().or(z.literal("")),
   openToOtherNiches: z.enum(["true", "false"]),
-  instagramProfileUrl: z.string().regex(INSTAGRAM_PROFILE_PATTERN, "Enter a valid Instagram profile URL"),
+  instagramProfileUrl: z
+    .string()
+    .transform((v) => normalizeUrl(v))
+    .refine((v) => isUrlLike(v) && INSTAGRAM_PROFILE_PATTERN.test(v), "Enter a valid Instagram profile URL"),
   followerCount: z.coerce.number().int().min(0),
   portfolioLinks: z.array(linkSchema).max(30),
 });
