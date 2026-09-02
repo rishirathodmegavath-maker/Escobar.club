@@ -47,7 +47,12 @@ export function CreatorKycPage() {
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { documentKey: "" } });
 
-  const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(DRAFT_KEY);
+  // Once KYC is verified there's nothing left to resume - an old draft from before verification
+  // would just prompt the user to "restore" work that's already been approved and submitted.
+  const { draft, dismiss: dismissDraft } = useDraftRestore<FormValues>(
+    DRAFT_KEY,
+    !isLoading && data?.status !== "VERIFIED",
+  );
   const watchedValues = watch();
   const draftSaveStatus = useDraftAutosave(DRAFT_KEY, watchedValues, !isLoading && isDirty);
 
