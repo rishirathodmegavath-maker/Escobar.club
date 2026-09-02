@@ -170,6 +170,13 @@ export const MoonIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const EditIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M13.5 5.5l5 5L8 21H3v-5z" />
+    <path d="M12 7l5 5" />
+  </svg>
+);
+
 export const BoltIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)} strokeLinejoin="round">
     <path d="M13 3L5 14h5l-1 7 8-11h-5l1-7z" />

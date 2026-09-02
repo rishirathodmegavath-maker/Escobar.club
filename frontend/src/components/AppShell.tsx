@@ -6,14 +6,13 @@ import { useAuth } from "@/auth/AuthContext";
 import { useTheme } from "@/theme/ThemeContext";
 import { businessesApi } from "@/api/businesses";
 import { creatorsApi } from "@/api/creators";
-import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { SignalMark } from "./SignalMark";
+import { AccountMenu, type AccountMenuItem } from "./AccountMenu";
 import {
   CompassIcon,
   ImageStackIcon,
   UserIcon,
-  LogoutIcon,
   TrophyIcon,
   MegaphoneIcon,
   IdCardIcon,
@@ -24,6 +23,7 @@ import {
   MoonIcon,
   ChevronRightIcon,
   CoinIcon,
+  EditIcon,
 } from "./icons";
 
 const SIDEBAR_COLLAPSED_KEY = "escobar.sidebarCollapsed";
@@ -105,6 +105,24 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
     ];
   }
   return [{ label: "Browse", items: [{ to: "/", label: "Discover", icon: CompassIcon }] }];
+}
+
+function accountMenuItemsForRole(role: string | undefined): AccountMenuItem[] {
+  if (role === "BUSINESS") {
+    return [
+      { to: "/business/profile", label: "View Profile", icon: UserIcon },
+      { to: "/business/profile/edit", label: "Edit Profile", icon: EditIcon },
+      { to: "/account/security", label: "Account Settings", icon: ShieldIcon },
+    ];
+  }
+  if (role === "CREATOR") {
+    return [
+      { to: "/creator/profile", label: "View Profile", icon: UserIcon },
+      { to: "/creator/profile/edit", label: "Edit Profile", icon: EditIcon },
+      { to: "/account/security", label: "Account Settings", icon: ShieldIcon },
+    ];
+  }
+  return [];
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -213,31 +231,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         {user ? (
-          <div
-            className={clsx(
-              "mt-4 flex items-center rounded-xl border border-white/10 bg-white/5 py-3",
-              collapsed ? "flex-col gap-2 px-2" : "gap-3 px-3",
-            )}
-          >
-            <Avatar name={user.email} imageUrl={avatarImageUrl} size={collapsed ? 30 : 34} />
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-paper-50">{user.email}</p>
-                <p className="text-[11px] uppercase tracking-wide text-paper-50/50">{user.role.toLowerCase()}</p>
-              </div>
-            )}
-            <button
-              aria-label="Log out"
-              title="Log out"
-              onClick={() => {
-                logout();
-                navigate("/login");
-              }}
-              className="focus-ring rounded-md p-1.5 text-paper-50/50 hover:bg-white/10 hover:text-danger-400"
-            >
-              <LogoutIcon className="h-4 w-4" />
-            </button>
-          </div>
+          <AccountMenu
+            email={user.email}
+            role={user.role}
+            avatarImageUrl={avatarImageUrl}
+            collapsed={collapsed}
+            items={accountMenuItemsForRole(user.role)}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+          />
         ) : collapsed ? (
           <Link
             to="/login"

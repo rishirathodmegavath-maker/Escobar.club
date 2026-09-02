@@ -14,12 +14,14 @@ import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { CreatorHelpPage } from "@/pages/CreatorHelpPage";
 import { CreatorContentPage } from "@/pages/creator/CreatorContentPage";
 import { CreatorProfilePage } from "@/pages/creator/CreatorProfilePage";
+import { CreatorProfileViewPage } from "@/pages/creator/CreatorProfileViewPage";
 import { CreatorKycPage } from "@/pages/creator/CreatorKycPage";
 import { BusinessDashboardPage } from "@/pages/business/BusinessDashboardPage";
 import { BusinessContentReviewPage } from "@/pages/business/BusinessContentReviewPage";
 import { BusinessPayoutsPage } from "@/pages/business/BusinessPayoutsPage";
 import { BusinessCreatorProfilePage } from "@/pages/business/BusinessCreatorProfilePage";
 import { BusinessProfilePage } from "@/pages/business/BusinessProfilePage";
+import { BusinessProfileViewPage } from "@/pages/business/BusinessProfileViewPage";
 import { BusinessLeaderboardPage } from "@/pages/business/BusinessLeaderboardPage";
 import { BusinessCampaignsPage } from "@/pages/business/BusinessCampaignsPage";
 import { LeaderboardPage } from "@/pages/LeaderboardPage";
@@ -80,6 +82,16 @@ export default function App() {
       />
       <Route
         path="/creator/profile"
+        element={
+          <ProtectedRoute allowedRoles={["CREATOR"]}>
+            <AppShell>
+              <CreatorProfileViewPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/creator/profile/edit"
         element={
           <ProtectedRoute allowedRoles={["CREATOR"]}>
             <AppShell>
@@ -151,6 +163,16 @@ export default function App() {
       />
       <Route
         path="/business/profile"
+        element={
+          <ProtectedRoute allowedRoles={["BUSINESS"]}>
+            <AppShell>
+              <BusinessProfileViewPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/business/profile/edit"
         element={
           <ProtectedRoute allowedRoles={["BUSINESS"]}>
             <AppShell>

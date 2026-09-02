@@ -55,7 +55,7 @@ export function RegisterPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { role: "CREATOR" } });
 
   const goToDestination = (user: { role: string }) => {
-    navigate(user.role === "BUSINESS" ? "/business/profile" : "/creator/profile", { replace: true });
+    navigate(user.role === "BUSINESS" ? "/business/profile/edit" : "/creator/profile/edit", { replace: true });
   };
 
   const onSubmit = async (values: FormValues) => {
