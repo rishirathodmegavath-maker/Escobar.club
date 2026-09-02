@@ -205,16 +205,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <button
           type="button"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((c) => !c)}
-          className="focus-ring absolute -right-3 top-8 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#100E0C] text-paper-50/60 shadow-md transition-colors hover:text-paper-50 lg:flex"
-        >
-          <ChevronRightIcon className={clsx("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-180")} />
-        </button>
-
-        <button
-          type="button"
           aria-label="Close menu"
           onClick={() => setMobileNavOpen(false)}
           className="focus-ring absolute right-4 top-6 flex h-8 w-8 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50 lg:hidden"
@@ -226,28 +216,50 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SignalMark size={30} />
           {showExpanded && <span className="font-display text-lg font-semibold tracking-tight text-paper-50">Escobar.Club</span>}
           {showExpanded && (
+            <div className="ml-auto hidden items-center gap-1 lg:flex">
+              <button
+                type="button"
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                onClick={toggleTheme}
+                className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+              >
+                {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setCollapsed((c) => !c)}
+                className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+              >
+                <ChevronRightIcon className={clsx("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-180")} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {!showExpanded && (
+          <div className="mb-6 hidden flex-col items-center gap-2 lg:flex">
             <button
               type="button"
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               onClick={toggleTheme}
-              className="focus-ring ml-auto hidden h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50 lg:flex"
+              className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
             >
               {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
             </button>
-          )}
-        </div>
-
-        {!showExpanded && (
-          <button
-            type="button"
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            onClick={toggleTheme}
-            className="focus-ring mb-6 hidden h-7 w-7 shrink-0 items-center justify-center self-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50 lg:flex"
-          >
-            {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
-          </button>
+            <button
+              type="button"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setCollapsed((c) => !c)}
+              className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-50/60 transition-colors hover:bg-white/10 hover:text-paper-50"
+            >
+              <ChevronRightIcon className={clsx("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-180")} />
+            </button>
+          </div>
         )}
 
         <nav className="flex flex-1 flex-col gap-1">
