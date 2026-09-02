@@ -1,13 +1,20 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import clsx from "clsx";
 import { contentApi } from "@/api/content";
 import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { ImageStackIcon } from "@/components/icons";
 import { Button } from "@/components/Button";
 import { ContentCard } from "@/features/content/ContentCard";
+import type { ContentStatus } from "@/types";
+
+type StatFilter = Extract<ContentStatus, "PUBLISHED" | "SUBMITTED" | "CHANGES_REQUESTED">;
 
 export function CreatorContentPage() {
+  const [filter, setFilter] = useState<StatFilter | null>(null);
+
   const { data: content, isLoading } = useQuery({
     queryKey: ["content", "me"],
     queryFn: () => contentApi.mine(0, 200),
@@ -20,6 +27,8 @@ export function CreatorContentPage() {
   const awaitingReview = items.filter((i) => i.status === "SUBMITTED").length;
   const changesRequested = items.filter((i) => i.status === "CHANGES_REQUESTED").length;
   const featured = items.find((i) => i.status === "PUBLISHED") ?? items[0];
+  const visibleItems = filter ? items.filter((i) => i.status === filter) : items;
+  const toggleFilter = (status: StatFilter) => setFilter((current) => (current === status ? null : status));
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,25 +70,60 @@ export function CreatorContentPage() {
           )}
 
           <div className="grid grid-cols-3 gap-3.5">
-            <div className="card-surface flex flex-col gap-1 p-4">
+            <button
+              type="button"
+              onClick={() => toggleFilter("PUBLISHED")}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === "PUBLISHED" ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Published</p>
               <p className="font-mono text-xl font-bold text-ink-900">{published}</p>
-            </div>
-            <div className="card-surface flex flex-col gap-1 p-4">
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFilter("SUBMITTED")}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === "SUBMITTED" ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Awaiting review</p>
               <p className="font-mono text-xl font-bold text-ink-900">{awaitingReview}</p>
-            </div>
-            <div className="card-surface flex flex-col gap-1 p-4">
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFilter("CHANGES_REQUESTED")}
+              className={clsx(
+                "card-surface focus-ring flex flex-col gap-1 p-4 text-left transition-colors",
+                filter === "CHANGES_REQUESTED" ? "ring-2 ring-signal-500" : "hover:bg-surface-hover",
+              )}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Changes requested</p>
               <p className="font-mono text-xl font-bold text-ink-900">{changesRequested}</p>
-            </div>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {items.map((item) => (
-              <ContentCard key={item.id} content={item} />
-            ))}
-          </div>
+          {filter && (
+            <button
+              type="button"
+              onClick={() => setFilter(null)}
+              className="focus-ring self-start text-xs font-medium text-signal-600 hover:text-signal-700"
+            >
+              Clear filter
+            </button>
+          )}
+
+          {visibleItems.length === 0 ? (
+            <EmptyState icon={<ImageStackIcon className="h-10 w-10" />} title="Nothing matches this filter" />
+          ) : (
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {visibleItems.map((item) => (
+                <ContentCard key={item.id} content={item} />
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
