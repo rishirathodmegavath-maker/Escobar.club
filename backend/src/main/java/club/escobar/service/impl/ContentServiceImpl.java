@@ -30,6 +30,7 @@ import club.escobar.service.ContentService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,10 +64,19 @@ public class ContentServiceImpl implements ContentService {
     private final ContentMapper contentMapper;
     // Self-injection so reviewBulk() can call review() through the Spring proxy (self.review(...))
     // rather than this.review(...) - a plain self-call bypasses @Transactional entirely, which would
-    // mean one bad item in a batch could roll back or corrupt the isolation of the others. @Lazy
-    // breaks the circular-dependency-at-startup issue this pattern would otherwise cause.
-    @Lazy
-    private final ContentService self;
+    // mean one bad item in a batch could roll back or corrupt the isolation of the others.
+    // Wired via a setter (not the Lombok-generated constructor) because Lombok's
+    // @RequiredArgsConstructor does not copy @Lazy onto the generated constructor parameter, which
+    // left this as a genuine eager self-reference and crashed the app on every startup
+    // ("Requested bean is currently in creation") - Spring disallows circular references by default
+    // since Boot 2.6. A setter parameter keeps @Lazy exactly where Spring needs it to defer
+    // resolution behind a proxy.
+    private ContentService self;
+
+    @Autowired
+    public void setSelf(@Lazy ContentService self) {
+        this.self = self;
+    }
 
     @Override
     @Transactional

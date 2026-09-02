@@ -68,10 +68,11 @@ class ContentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // self=null is fine here - none of the tests below call reviewBulk(), the only method that
-        // uses it. The reviewBulk tests build their own two-instance wiring (see reviewBulk_...).
+        // self left unset (setSelf never called) is fine here - none of the tests below call
+        // reviewBulk(), the only method that uses it. The reviewBulk tests build their own
+        // two-instance wiring (see reviewBulk_...).
         contentService = new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
-                creatorKycProfileRepository, payoutRepository, contentMapper, null);
+                creatorKycProfileRepository, payoutRepository, contentMapper);
         lenient().when(creatorKycProfileRepository.existsByCreator_IdAndStatusAndReviewedBy_Role(anyLong(), any(), any()))
                 .thenReturn(true);
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).build();
@@ -481,14 +482,16 @@ class ContentServiceImplTest {
     }
 
     // reviewBulk() calls self.review(...) per item so each one gets its own transaction in
-    // production (see the @Lazy self field in ContentServiceImpl). For this unit test, "self" is
+    // production (see the @Lazy self setter in ContentServiceImpl). For this unit test, "self" is
     // wired to a second ContentServiceImpl instance sharing the same mocks - functionally equivalent
     // to true self-invocation, since both instances read/write through the same mocked repositories.
     private ContentServiceImpl contentServiceWithWorkingSelf() {
         ContentServiceImpl inner = new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
-                creatorKycProfileRepository, payoutRepository, contentMapper, null);
-        return new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
-                creatorKycProfileRepository, payoutRepository, contentMapper, inner);
+                creatorKycProfileRepository, payoutRepository, contentMapper);
+        ContentServiceImpl outer = new ContentServiceImpl(contentRepository, campaignRepository, userRepository,
+                creatorKycProfileRepository, payoutRepository, contentMapper);
+        outer.setSelf(inner);
+        return outer;
     }
 
     @Test
