@@ -26,7 +26,6 @@ export function CreatorContentPage() {
   const published = items.filter((i) => i.status === "PUBLISHED").length;
   const awaitingReview = items.filter((i) => i.status === "SUBMITTED").length;
   const changesRequested = items.filter((i) => i.status === "CHANGES_REQUESTED").length;
-  const featured = items.find((i) => i.status === "PUBLISHED") ?? items[0];
   const visibleItems = filter ? items.filter((i) => i.status === filter) : items;
   const toggleFilter = (status: StatFilter) => setFilter((current) => (current === status ? null : status));
 
@@ -50,24 +49,25 @@ export function CreatorContentPage() {
         />
       ) : (
         <>
-          {featured && (
-            <div className="hero-card flex items-center gap-6">
-              <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-signal-500 to-signal-800 shadow-[0_18px_34px_-12px_rgba(0,0,0,0.55)]">
-                {featured.mediaType === "IMAGE" ? (
-                  <img src={featured.mediaUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-3xl">🎬</span>
-                )}
-              </div>
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <span className="w-fit rounded-full bg-mint-soft px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-mint-deep">
-                  {featured.status === "PUBLISHED" ? "Live" : "Latest submission"}
-                </span>
-                <h2 className="truncate font-display text-xl font-bold leading-tight text-ink-900">{featured.campaignTitle}</h2>
-                <p className="text-sm text-ink-500">{featured.businessCompanyName}</p>
-              </div>
+          <div className="hero-card flex items-center gap-6">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-signal-500 to-signal-800 text-3xl shadow-[0_18px_34px_-12px_rgba(0,0,0,0.55)]">
+              {changesRequested === 0 ? "✓" : "⏱"}
             </div>
-          )}
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span
+                className={
+                  "w-fit rounded-full px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide " +
+                  (changesRequested === 0 ? "bg-mint-soft text-mint-deep" : "bg-gold-soft text-gold-deep")
+                }
+              >
+                {changesRequested === 0 ? "All caught up" : "Needs your attention"}
+              </span>
+              <h2 className="font-display text-xl font-bold leading-tight text-ink-900">My submissions</h2>
+              <p className="text-sm text-ink-500">
+                {items.length} piece{items.length === 1 ? "" : "s"} of content submitted across your campaigns.
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-3 gap-3.5">
             <button
