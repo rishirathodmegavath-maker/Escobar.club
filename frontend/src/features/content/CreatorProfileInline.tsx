@@ -4,7 +4,7 @@ import { Spinner } from "@/components/Spinner";
 import { TickMeter } from "@/components/TickMeter";
 import { Avatar } from "@/components/Avatar";
 
-export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
+export function CreatorProfileInline({ creatorId, hideHeader }: { creatorId: number; hideHeader?: boolean }) {
   const { data, isLoading } = useQuery({
     queryKey: ["creator", creatorId],
     queryFn: () => creatorsApi.getById(creatorId),
@@ -21,10 +21,12 @@ export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <div className="col-span-full flex items-center gap-3">
-        <Avatar name={data.displayName} imageUrl={data.profilePictureUrl} size={44} />
-        <span className="font-display text-base font-semibold text-ink-900">{data.displayName}</span>
-      </div>
+      {!hideHeader && (
+        <div className="col-span-full flex items-center gap-3">
+          <Avatar name={data.displayName} imageUrl={data.profilePictureUrl} size={44} />
+          <span className="font-display text-base font-semibold text-ink-900">{data.displayName}</span>
+        </div>
+      )}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Bio</p>
         <p className="mt-1 text-sm text-ink-600">{data.bio || "No bio provided."}</p>

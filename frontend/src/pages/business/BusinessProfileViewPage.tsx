@@ -33,29 +33,28 @@ export function BusinessProfileViewPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-ink-900">Company profile</h1>
-          <p className="mt-1.5 text-ink-500">This is your public page — creators will see this before applying.</p>
+      <div className="hero-card flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar name={data.companyName} imageUrl={data.logoUrl} size={72} />
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-semibold text-ink-900">{data.companyName}</h1>
+              <span className="rounded-full bg-signal-50 px-2.5 py-0.5 text-xs font-semibold text-signal-700">Business</span>
+            </div>
+            {data.industry && <p className="mt-0.5 text-sm text-ink-500">{data.industry}</p>}
+          </div>
         </div>
-        <Link to="/business/profile/edit">
+        <Link to="/business/profile/edit" className="shrink-0">
           <Button size="sm">
             <EditIcon className="h-4 w-4" />
             Edit Profile
           </Button>
         </Link>
       </div>
+      <p className="mt-3 text-sm text-ink-500">This is your public page — creators will see this before applying.</p>
 
-      <div className="card-surface flex flex-col gap-6 p-7">
-        <div className="flex items-center gap-4">
-          <Avatar name={data.companyName} imageUrl={data.logoUrl} size={64} />
-          <div>
-            <h2 className="font-display text-xl font-semibold text-ink-900">{data.companyName}</h2>
-            {data.industry && <p className="text-sm text-ink-500">{data.industry}</p>}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 border-t border-ink-100 pt-6 sm:grid-cols-2">
+      <div className="card-surface mt-4 flex flex-col gap-6 p-7">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <ProfileField label="GST Number" value={data.gstNumber} />
           <ProfileField label="Contact Person" value={data.contactPersonName} />
           <ProfileField label="Mobile Number" value={data.mobileNumber} />
