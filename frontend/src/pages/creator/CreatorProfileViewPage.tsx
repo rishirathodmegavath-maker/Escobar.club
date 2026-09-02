@@ -1,3 +1,5 @@
+import { useState } from "react";
+import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/auth/AuthContext";
@@ -5,6 +7,7 @@ import { creatorsApi } from "@/api/creators";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { FullPageSpinner } from "@/components/Spinner";
+import { ImageViewerModal } from "@/components/ImageViewerModal";
 import { EditIcon } from "@/components/icons";
 import { CreatorProfileInline } from "@/features/content/CreatorProfileInline";
 
@@ -15,6 +18,7 @@ export function CreatorProfileViewPage() {
     queryFn: creatorsApi.getMine,
     enabled: !!user,
   });
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   if (!user || isLoading) return <FullPageSpinner />;
   if (!data) return null;
@@ -23,7 +27,14 @@ export function CreatorProfileViewPage() {
     <div className="mx-auto max-w-2xl">
       <div className="hero-card flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Avatar name={data.displayName} imageUrl={data.profilePictureUrl} size={72} />
+          <button
+            type="button"
+            onClick={() => data.profilePictureUrl && setViewerOpen(true)}
+            className={clsx("focus-ring shrink-0 rounded-avatar", data.profilePictureUrl && "cursor-zoom-in")}
+            aria-label={data.profilePictureUrl ? "View profile picture" : undefined}
+          >
+            <Avatar name={data.displayName} imageUrl={data.profilePictureUrl} size={72} />
+          </button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-semibold text-ink-900">{data.displayName}</h1>
@@ -44,6 +55,10 @@ export function CreatorProfileViewPage() {
       <div className="card-surface mt-4 flex flex-col gap-4 p-7">
         <CreatorProfileInline creatorId={user.id} hideHeader />
       </div>
+
+      {viewerOpen && data.profilePictureUrl && (
+        <ImageViewerModal imageUrl={data.profilePictureUrl} alt={data.displayName} onClose={() => setViewerOpen(false)} />
+      )}
     </div>
   );
 }

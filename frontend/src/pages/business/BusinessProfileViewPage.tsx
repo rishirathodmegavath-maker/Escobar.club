@@ -1,9 +1,12 @@
+import { useState } from "react";
+import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { businessesApi } from "@/api/businesses";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { FullPageSpinner } from "@/components/Spinner";
+import { ImageViewerModal } from "@/components/ImageViewerModal";
 import { EditIcon } from "@/components/icons";
 
 function ProfileField({ label, value, href }: { label: string; value: string | null; href?: string | null }) {
@@ -27,6 +30,7 @@ function ProfileField({ label, value, href }: { label: string; value: string | n
 
 export function BusinessProfileViewPage() {
   const { data, isLoading } = useQuery({ queryKey: ["business", "me"], queryFn: businessesApi.getMine });
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   if (isLoading) return <FullPageSpinner />;
   if (!data) return null;
@@ -35,7 +39,14 @@ export function BusinessProfileViewPage() {
     <div className="mx-auto max-w-2xl">
       <div className="hero-card flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Avatar name={data.companyName} imageUrl={data.logoUrl} size={72} />
+          <button
+            type="button"
+            onClick={() => data.logoUrl && setViewerOpen(true)}
+            className={clsx("focus-ring shrink-0 rounded-avatar", data.logoUrl && "cursor-zoom-in")}
+            aria-label={data.logoUrl ? "View company logo" : undefined}
+          >
+            <Avatar name={data.companyName} imageUrl={data.logoUrl} size={72} />
+          </button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-semibold text-ink-900">{data.companyName}</h1>
@@ -66,6 +77,10 @@ export function BusinessProfileViewPage() {
           <p className="mt-1 whitespace-pre-wrap text-sm text-ink-600">{data.description || "No description added yet."}</p>
         </div>
       </div>
+
+      {viewerOpen && data.logoUrl && (
+        <ImageViewerModal imageUrl={data.logoUrl} alt={data.companyName} onClose={() => setViewerOpen(false)} />
+      )}
     </div>
   );
 }
