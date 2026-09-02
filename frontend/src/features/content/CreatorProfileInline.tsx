@@ -48,7 +48,7 @@ export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
               href={data.instagramProfileUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-sm text-signal-600 hover:underline"
+              className="mt-1 block break-all text-sm text-signal-600 hover:underline"
             >
               {data.instagramProfileUrl}
             </a>
@@ -60,7 +60,7 @@ export function CreatorProfileInline({ creatorId }: { creatorId: number }) {
             <ul className="mt-1 flex flex-col gap-1">
               {data.portfolioLinks.map((link) => (
                 <li key={link}>
-                  <a href={link} target="_blank" rel="noreferrer" className="text-sm text-signal-600 hover:underline">
+                  <a href={link} target="_blank" rel="noreferrer" className="block break-all text-sm text-signal-600 hover:underline">
                     {link}
                   </a>
                 </li>

@@ -12,7 +12,7 @@ function ProfileField({ label, value, href }: { label: string; value: string | n
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{label}</p>
       {value ? (
         href ? (
-          <a href={href} target="_blank" rel="noreferrer" className="focus-ring mt-1 block text-sm text-signal-600 hover:underline">
+          <a href={href} target="_blank" rel="noreferrer" className="focus-ring mt-1 block break-all text-sm text-signal-600 hover:underline">
             {value}
           </a>
         ) : (
