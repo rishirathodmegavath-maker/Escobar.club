@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
 import type { ContentRecord, MediaType } from "@/types";
 import { StatusPill } from "@/components/StatusPill";
 import { Button } from "@/components/Button";
@@ -16,6 +17,7 @@ import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
 
 export function ContentCard({ content }: { content: ContentRecord }) {
+  const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [caption, setCaption] = useState(content.caption ?? "");
   const [media, setMedia] = useState<{ url: string; mediaType: MediaType } | null>({
@@ -41,66 +43,82 @@ export function ContentCard({ content }: { content: ContentRecord }) {
 
   return (
     <div className="card-surface flex flex-col gap-4 p-6">
-      <div className="flex items-start justify-between gap-4">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="focus-ring flex items-start justify-between gap-4 text-left"
+      >
         <div className="flex items-center gap-3">
           <Avatar name={content.businessCompanyName} imageUrl={content.businessLogoUrl} size={40} />
           <div>
-            <h3 className="font-display text-lg font-semibold text-ink-900">{content.businessCompanyName}</h3>
-            <p className="text-xs text-ink-400">Version {content.version}</p>
+            <span className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900 hover:text-signal-700">
+              {content.campaignTitle}
+              <span className={clsx("text-xs text-ink-300 transition-transform", expanded && "rotate-180")}>▾</span>
+            </span>
+            <p className="text-xs text-ink-400">
+              {content.businessCompanyName} · Version {content.version}
+            </p>
           </div>
         </div>
         <StatusPill status={content.status} />
-      </div>
+      </button>
 
-      {!editing && (
+      {expanded && (
         <>
-          {content.mediaType === "IMAGE" ? (
-            <img src={content.mediaUrl} alt="" className="max-h-64 w-full rounded-lg object-cover" />
-          ) : (
-            <video src={content.mediaUrl} controls className="max-h-64 w-full rounded-lg" />
+          {!editing && (
+            <>
+              {content.mediaType === "IMAGE" ? (
+                <img src={content.mediaUrl} alt="" className="max-h-64 w-full rounded-lg object-cover" />
+              ) : (
+                <video src={content.mediaUrl} controls className="max-h-64 w-full rounded-lg" />
+              )}
+              {content.caption && <p className="text-sm text-ink-600">{content.caption}</p>}
+            </>
           )}
-          {content.caption && <p className="text-sm text-ink-600">{content.caption}</p>}
-        </>
-      )}
 
-      {content.status === "CHANGES_REQUESTED" && (
-        <div className="border-t border-ink-100 pt-4">
-          {editing ? (
-            <div className="flex flex-col gap-4">
-              {error && <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">{error}</div>}
-              <MediaUploadField value={media} onChange={setMedia} />
-              <TextArea label="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
-              <div className="flex gap-2">
-                <Button isLoading={mutation.isPending} onClick={() => mutation.mutate()}>
-                  Resubmit for review
+          {content.status === "CHANGES_REQUESTED" && (
+            <div className="border-t border-ink-100 pt-4">
+              {editing ? (
+                <div className="flex flex-col gap-4">
+                  {error && (
+                    <div className="rounded-lg border border-danger-200 bg-danger-soft px-3 py-2 text-sm text-danger-deep">
+                      {error}
+                    </div>
+                  )}
+                  <MediaUploadField value={media} onChange={setMedia} />
+                  <TextArea label="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Button isLoading={mutation.isPending} onClick={() => mutation.mutate()}>
+                      Resubmit for review
+                    </Button>
+                    <Button variant="ghost" onClick={() => setEditing(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="gold" onClick={() => setEditing(true)}>
+                  Edit &amp; resubmit
                 </Button>
-                <Button variant="ghost" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-              </div>
+              )}
             </div>
-          ) : (
-            <Button variant="gold" onClick={() => setEditing(true)}>
-              Edit &amp; resubmit
-            </Button>
           )}
-        </div>
-      )}
 
-      {content.status === "APPROVED" && <PublishContentForm content={content} />}
+          {content.status === "APPROVED" && <PublishContentForm content={content} />}
 
-      <PublishedLinkStatus content={content} />
+          <PublishedLinkStatus content={content} />
 
-      {content.status === "PUBLISHED" && (
-        <>
-          <ContentMetricsPanel content={content} />
-          <PayoutPanel content={content} />
+          {content.status === "PUBLISHED" && (
+            <>
+              <ContentMetricsPanel content={content} />
+              <PayoutPanel content={content} />
+            </>
+          )}
+
+          <div className="border-t border-ink-100 pt-4">
+            <ReviewNotesTimeline notes={content.reviewNotes} />
+          </div>
         </>
       )}
-
-      <div className="border-t border-ink-100 pt-4">
-        <ReviewNotesTimeline notes={content.reviewNotes} />
-      </div>
     </div>
   );
 }
