@@ -71,6 +71,10 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
   if (role === "CREATOR") {
     return [
       {
+        label: "Overview",
+        items: [{ to: "/creator/dashboard", label: "Dashboard", icon: SparkIcon }],
+      },
+      {
         label: "Browse",
         items: [
           { to: "/", label: "Discover", icon: CompassIcon },
@@ -81,6 +85,7 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
         label: "You",
         items: [
           { to: "/creator/content", label: "My submissions", icon: ImageStackIcon },
+          { to: "/creator/payouts", label: "Earnings & Payouts", icon: CoinIcon },
           { to: "/creator/kyc", label: "My KYC", icon: IdCardIcon },
           { to: "/creator/profile", label: "My profile", icon: UserIcon },
           { to: "/account/security", label: "Security", icon: ShieldIcon },

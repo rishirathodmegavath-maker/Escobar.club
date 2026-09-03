@@ -1,5 +1,6 @@
 package club.escobar.service.impl;
 
+import club.escobar.dto.campaign.CampaignAnalyticsResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
@@ -19,6 +20,7 @@ import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
 import club.escobar.mapper.CampaignMapper;
 import club.escobar.repository.BusinessProfileRepository;
+import club.escobar.repository.CampaignMetricsRow;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
 import club.escobar.repository.ContentRepository;
@@ -30,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -337,6 +340,35 @@ public class CampaignServiceImpl implements CampaignService {
         // Public/unauthenticated endpoint (shared by creators and businesses alike) - never expose
         // a business's internal budget numbers here, same as listPublic().
         return withBudget(campaign, response, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CampaignResponse> listRecommendedForCreator(Long creatorId, int limit) {
+        BigDecimal rateThreshold = computeActiveRateThreshold();
+        List<Campaign> campaigns = campaignRepository.findOpenNotYetSubmittedByCreator(
+                creatorId, COMMITTED_PAYOUT_STATUSES, PageRequest.of(0, limit));
+        return campaigns.stream()
+                .map(c -> withBudget(c, withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)), false))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CampaignAnalyticsResponse getAnalytics(Long requestingUserId, Long campaignId) {
+        Campaign campaign = findById(campaignId);
+        if (!campaign.getBusiness().getId().equals(requestingUserId)) {
+            throw new ForbiddenActionException("You may only view analytics for your own campaigns");
+        }
+        CampaignMetricsRow metrics = contentRepository.findCampaignMetrics(campaignId);
+        long views = metrics.getViews();
+        long likes = metrics.getLikes();
+        long comments = metrics.getComments();
+        double engagementRate = views == 0 ? 0.0 : Math.round((likes + comments) * 1000.0 / views) / 10.0;
+        BigDecimal committed = payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(campaignId, COMMITTED_PAYOUT_STATUSES);
+        return new CampaignAnalyticsResponse(
+                campaignId, views, likes, comments, engagementRate,
+                metrics.getCreatorsCount(), metrics.getPublishedContentCount(), committed);
     }
 
     private Campaign findById(Long campaignId) {

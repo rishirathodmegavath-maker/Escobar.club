@@ -248,6 +248,39 @@ export interface AdminDashboardSummary {
   pendingCreatorKyc: number;
 }
 
+export interface PerformanceWindow {
+  views: number;
+  likes: number;
+  comments: number;
+  publishedCount: number;
+  engagementRate: number;
+}
+
+export interface PerformanceSummary {
+  sevenDay: PerformanceWindow;
+  thirtyDay: PerformanceWindow;
+  ninetyDay: PerformanceWindow;
+  allTime: PerformanceWindow;
+}
+
+export interface NeedsAttentionItem {
+  message: string;
+  actionLabel: string;
+  actionPath: string;
+}
+
+export interface TopContentItem {
+  contentId: number;
+  creatorDisplayName: string;
+  campaignTitle: string;
+  mediaType: string;
+  views: number;
+  likes: number;
+  comments: number;
+  engagementRate: number;
+  postUrl: string | null;
+}
+
 export interface BusinessDashboardSummary {
   approvalStatus: ApprovalStatus;
   totalCampaigns: number;
@@ -262,6 +295,103 @@ export interface BusinessDashboardSummary {
   payoutsPendingKycCount: number;
   totalPaidOutInr: number;
   campaignsNearBudgetCap: number;
+  approvedContentCount: number;
+  rejectedContentCount: number;
+  participatingCreatorsCount: number;
+  totalViews: number;
+  totalEngagement: number;
+  totalBudgetInr: number;
+  totalCommittedInr: number;
+  totalRemainingInr: number;
+  needsAttention: NeedsAttentionItem[];
+  campaignsPreview: CampaignPreview[];
+  creatorActivity: CreatorActivityItem[];
+  topContent: TopContentItem[];
+  performance: PerformanceSummary;
+}
+
+export interface CampaignPreview {
+  campaignId: number;
+  title: string;
+  status: string;
+  creatorsCount: number;
+  contentSubmittedCount: number;
+  contentPublishedCount: number;
+  views: number;
+  maxBudgetInr: number | null;
+  committedBudgetInr: number;
+  submissionDeadline: string;
+}
+
+export interface CreatorActivityItem {
+  creatorDisplayName: string;
+  campaignTitle: string;
+  message: string;
+  occurredAt: string;
+}
+
+export interface CampaignAnalytics {
+  campaignId: number;
+  views: number;
+  likes: number;
+  comments: number;
+  engagementRate: number;
+  creatorsCount: number;
+  publishedContentCount: number;
+  budgetCommittedInr: number;
+}
+
+export interface ContentStatusCounts {
+  submitted: number;
+  changesRequested: number;
+  approved: number;
+  pendingLinkReview: number;
+  published: number;
+  rejected: number;
+}
+
+export interface EarningsSummary {
+  pendingKycInr: number;
+  payableInr: number;
+  paidInr: number;
+  thisMonthPaidInr: number;
+}
+
+export interface ActiveCampaignSummary {
+  campaignId: number;
+  title: string;
+  status: string;
+  views: number;
+  earningsInr: number;
+}
+
+export interface RecentActivityItem {
+  message: string;
+  occurredAt: string;
+}
+
+export interface PayoutPreviewItem {
+  contentId: number;
+  campaignTitle: string;
+  amountInr: number;
+  status: PayoutStatus;
+  paidAt: string | null;
+}
+
+export interface CreatorDashboardSummary {
+  kycStatus: KycStatus | null;
+  profileCompletionPercent: number;
+  profileCompletionMissing: string[];
+  activeCampaignsCount: number;
+  submissionStatus: ContentStatusCounts;
+  earnings: EarningsSummary;
+  performance: PerformanceSummary;
+  needsAttention: NeedsAttentionItem[];
+  recommendedCampaigns: Campaign[];
+  activeCampaigns: ActiveCampaignSummary[];
+  topContent: TopContentItem[];
+  recentActivity: RecentActivityItem[];
+  recentPayouts: PayoutPreviewItem[];
 }
 
 export interface AdminCreatorSummary {

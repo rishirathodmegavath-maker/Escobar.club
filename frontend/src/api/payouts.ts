@@ -8,6 +8,10 @@ export const payoutsApi = {
     apiClient
       .get<PageResponse<Payout>>(`/businesses/${businessId}/payouts`, { params: { status, page, size } })
       .then((r) => r.data),
+  listForCreator: (creatorId: number, status?: PayoutStatus, page = 0, size = 20) =>
+    apiClient
+      .get<PageResponse<Payout>>(`/creators/${creatorId}/payouts`, { params: { status, page, size } })
+      .then((r) => r.data),
   markPaid: (contentId: number, paidNote?: string) =>
     apiClient.patch<Payout>(`/content/${contentId}/payout/paid`, { paidNote }).then((r) => r.data),
   exportCsv: (businessId: number, status?: PayoutStatus) =>

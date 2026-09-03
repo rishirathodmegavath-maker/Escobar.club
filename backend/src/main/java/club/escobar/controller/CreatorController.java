@@ -1,5 +1,6 @@
 package club.escobar.controller;
 
+import club.escobar.dto.creator.CreatorDashboardResponse;
 import club.escobar.dto.creator.CreatorProfileResponse;
 import club.escobar.dto.creator.CreatorProfileUpdateRequest;
 import club.escobar.security.SecurityUser;
@@ -27,6 +28,12 @@ public class CreatorController {
     @GetMapping("/{id}")
     public ResponseEntity<CreatorProfileResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(creatorProfileService.getByUserId(id));
+    }
+
+    @GetMapping("/me/dashboard")
+    @PreAuthorize("hasRole('CREATOR')")
+    public ResponseEntity<CreatorDashboardResponse> dashboard(@AuthenticationPrincipal SecurityUser user) {
+        return ResponseEntity.ok(creatorProfileService.dashboard(user.getId()));
     }
 
     @PutMapping("/me")

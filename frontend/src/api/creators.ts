@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { CreatorProfile } from "@/types";
+import type { CreatorDashboardSummary, CreatorProfile } from "@/types";
 
 export interface CreatorUpdatePayload {
   displayName: string;
@@ -21,6 +21,7 @@ export interface ProfilePictureUploadResult {
 export const creatorsApi = {
   getById: (id: number) => apiClient.get<CreatorProfile>(`/creators/${id}`).then((r) => r.data),
   getMine: () => apiClient.get<CreatorProfile>("/creators/me").then((r) => r.data),
+  dashboard: () => apiClient.get<CreatorDashboardSummary>("/creators/me/dashboard").then((r) => r.data),
   updateMine: (payload: CreatorUpdatePayload) =>
     apiClient.put<CreatorProfile>("/creators/me", payload).then((r) => r.data),
   uploadProfilePicture: (file: File, onProgress?: (percent: number) => void) => {

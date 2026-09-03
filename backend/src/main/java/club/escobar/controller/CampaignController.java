@@ -1,5 +1,6 @@
 package club.escobar.controller;
 
+import club.escobar.dto.campaign.CampaignAnalyticsResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
@@ -80,6 +81,14 @@ public class CampaignController {
             @PathVariable Long id,
             @Valid @RequestBody CampaignScheduleUpdateRequest request) {
         return ResponseEntity.ok(campaignService.updateSchedule(user.getId(), id, request));
+    }
+
+    @GetMapping("/api/campaigns/{id}/analytics")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ResponseEntity<CampaignAnalyticsResponse> analytics(
+            @AuthenticationPrincipal SecurityUser user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(campaignService.getAnalytics(user.getId(), id));
     }
 
     @GetMapping("/api/campaigns/{id}/schedule-history")

@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface PayoutRepository extends JpaRepository<Payout, Long> {
@@ -17,6 +19,8 @@ public interface PayoutRepository extends JpaRepository<Payout, Long> {
     Optional<Payout> findByContent_Id(Long contentId);
 
     Page<Payout> findByCreator_Id(Long creatorId, Pageable pageable);
+
+    Page<Payout> findByCreator_IdAndStatus(Long creatorId, PayoutStatus status, Pageable pageable);
 
     Page<Payout> findByBusiness_Id(Long businessId, Pageable pageable);
 
@@ -38,4 +42,37 @@ public interface PayoutRepository extends JpaRepository<Payout, Long> {
             where p.campaign.id = :campaignId and p.status in :statuses
             """)
     BigDecimal sumAmountInrByCampaign_IdAndStatusIn(@Param("campaignId") Long campaignId, @Param("statuses") Collection<PayoutStatus> statuses);
+
+    @Query("""
+            select coalesce(sum(p.amountInr), 0) from Payout p
+            where p.creator.id = :creatorId and p.status = :status
+            """)
+    BigDecimal sumAmountInrByCreator_IdAndStatus(@Param("creatorId") Long creatorId, @Param("status") PayoutStatus status);
+
+    @Query("""
+            select coalesce(sum(p.amountInr), 0) from Payout p
+            where p.creator.id = :creatorId and p.status = :status and p.paidAt >= :since
+            """)
+    BigDecimal sumAmountInrByCreator_IdAndStatusAndPaidAtAfter(@Param("creatorId") Long creatorId,
+                                                                 @Param("status") PayoutStatus status,
+                                                                 @Param("since") Instant since);
+
+    // Business-scoped equivalent of sumAmountInrByCampaign_IdAndStatusIn, for the dashboard's
+    // portfolio-wide "Committed" total across all of a business's campaigns at once.
+    @Query("""
+            select coalesce(sum(p.amountInr), 0) from Payout p
+            where p.business.id = :businessId and p.status in :statuses
+            """)
+    BigDecimal sumAmountInrByBusiness_IdAndStatusIn(@Param("businessId") Long businessId, @Param("statuses") Collection<PayoutStatus> statuses);
+
+    // Backs the per-campaign "committed" figure in the Business Dashboard's campaign preview list -
+    // one grouped query across all of a business's campaigns rather than one query per campaign.
+    @Query("""
+            select p.campaign.id as campaignId, coalesce(sum(p.amountInr), 0) as committed
+            from Payout p
+            where p.business.id = :businessId and p.status in :statuses
+            group by p.campaign.id
+            """)
+    List<CampaignCommittedRow> sumCommittedByBusinessGroupedByCampaign(@Param("businessId") Long businessId,
+                                                                        @Param("statuses") Collection<PayoutStatus> statuses);
 }

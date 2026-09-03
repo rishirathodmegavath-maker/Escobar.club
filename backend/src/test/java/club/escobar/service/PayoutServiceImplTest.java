@@ -138,4 +138,23 @@ class PayoutServiceImplTest {
         assertThatThrownBy(() -> payoutService.listForBusinessAll(999L, 2L, PayoutStatus.PAYABLE))
                 .isInstanceOf(ForbiddenActionException.class);
     }
+
+    @Test
+    void listForCreator_returnsOwnPayouts_filteredByStatus() {
+        Payout payout = Payout.builder().id(50L).content(content).creator(creator).campaign(campaign).business(business)
+                .status(PayoutStatus.PAYABLE).amountInr(new BigDecimal("900.00")).build();
+        when(payoutRepository.findByCreator_IdAndStatus(eq(1L), eq(PayoutStatus.PAYABLE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(payout)));
+        when(payoutMapper.toResponse(payout)).thenReturn(mock(PayoutResponse.class));
+
+        var result = payoutService.listForCreator(1L, 1L, PayoutStatus.PAYABLE, Pageable.unpaged());
+
+        assertThat(result.content()).hasSize(1);
+    }
+
+    @Test
+    void listForCreator_rejectsWhenNotOwnPayouts() {
+        assertThatThrownBy(() -> payoutService.listForCreator(999L, 1L, null, Pageable.unpaged()))
+                .isInstanceOf(ForbiddenActionException.class);
+    }
 }

@@ -39,6 +39,16 @@ public class PayoutController {
         return ResponseEntity.ok(payoutService.getForContent(user.getId(), id));
     }
 
+    @GetMapping("/api/creators/{id}/payouts")
+    @PreAuthorize("hasRole('CREATOR')")
+    public ResponseEntity<PageResponse<PayoutResponse>> listForCreator(
+            @AuthenticationPrincipal SecurityUser user,
+            @PathVariable Long id,
+            @RequestParam(required = false) PayoutStatus status,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(payoutService.listForCreator(user.getId(), id, status, pageable));
+    }
+
     @GetMapping("/api/businesses/{id}/payouts")
     @PreAuthorize("hasRole('BUSINESS')")
     public ResponseEntity<PageResponse<PayoutResponse>> listForBusiness(

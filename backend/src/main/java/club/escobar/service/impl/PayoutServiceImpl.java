@@ -119,6 +119,18 @@ public class PayoutServiceImpl implements PayoutService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<PayoutResponse> listForCreator(Long requestingUserId, Long creatorId, PayoutStatus status, Pageable pageable) {
+        if (!requestingUserId.equals(creatorId)) {
+            throw new ForbiddenActionException("You may only view your own payouts");
+        }
+        Page<Payout> page = status != null
+                ? payoutRepository.findByCreator_IdAndStatus(creatorId, status, pageable)
+                : payoutRepository.findByCreator_Id(creatorId, pageable);
+        return PageResponse.of(page.map(payoutMapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PayoutResponse> listForBusinessAll(Long requestingUserId, Long businessId, PayoutStatus status) {
         if (!requestingUserId.equals(businessId)) {
             throw new ForbiddenActionException("You may only view your own payouts");

@@ -12,6 +12,8 @@ import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { CreatorHelpPage } from "@/pages/CreatorHelpPage";
+import { CreatorDashboardPage } from "@/pages/creator/CreatorDashboardPage";
+import { CreatorPayoutsPage } from "@/pages/creator/CreatorPayoutsPage";
 import { CreatorContentPage } from "@/pages/creator/CreatorContentPage";
 import { CreatorProfilePage } from "@/pages/creator/CreatorProfilePage";
 import { CreatorProfileViewPage } from "@/pages/creator/CreatorProfileViewPage";
@@ -71,6 +73,26 @@ export default function App() {
       />
       <Route path="/businesses/:id" element={<Navigate to="/" replace />} />
 
+      <Route
+        path="/creator/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["CREATOR"]}>
+            <AppShell>
+              <CreatorDashboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/creator/payouts"
+        element={
+          <ProtectedRoute allowedRoles={["CREATOR"]}>
+            <AppShell>
+              <CreatorPayoutsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/creator/content"
         element={

@@ -16,6 +16,8 @@ public interface PayoutService {
 
     PageResponse<PayoutResponse> listForBusiness(Long requestingUserId, Long businessId, PayoutStatus status, Pageable pageable);
 
+    PageResponse<PayoutResponse> listForCreator(Long requestingUserId, Long creatorId, PayoutStatus status, Pageable pageable);
+
     // Every matching row, unpaged - backs the CSV export, which must cover the whole filtered set,
     // not one page of it.
     List<PayoutResponse> listForBusinessAll(Long requestingUserId, Long businessId, PayoutStatus status);

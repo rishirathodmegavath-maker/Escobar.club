@@ -11,6 +11,7 @@ import club.escobar.mapper.BusinessProfileMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentRepository;
+import club.escobar.repository.MetricsRollupRow;
 import club.escobar.repository.PayoutRepository;
 import club.escobar.service.impl.BusinessProfileServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +45,8 @@ class BusinessProfileServiceImplTest {
     private ContentRepository contentRepository;
     @Mock
     private PayoutRepository payoutRepository;
+    @Mock
+    private MetricsRollupRow emptyMetrics;
 
     private BusinessProfileServiceImpl businessProfileService;
 
@@ -65,11 +72,28 @@ class BusinessProfileServiceImplTest {
         when(contentRepository.countByBusiness_IdAndStatus(2L, ContentStatus.CHANGES_REQUESTED)).thenReturn(1L);
         when(contentRepository.countByBusiness_IdAndStatus(2L, ContentStatus.PENDING_LINK_REVIEW)).thenReturn(1L);
         when(contentRepository.countByBusiness_IdAndStatus(2L, ContentStatus.PUBLISHED)).thenReturn(4L);
+        when(contentRepository.countByBusiness_IdAndStatus(2L, ContentStatus.APPROVED)).thenReturn(2L);
+        when(contentRepository.countByBusiness_IdAndStatus(2L, ContentStatus.REJECTED)).thenReturn(1L);
         when(payoutRepository.countByBusiness_IdAndStatus(2L, PayoutStatus.PAYABLE)).thenReturn(2L);
         when(payoutRepository.sumAmountInrByBusiness_IdAndStatus(2L, PayoutStatus.PAYABLE)).thenReturn(new BigDecimal("2500.00"));
         when(payoutRepository.countByBusiness_IdAndStatus(2L, PayoutStatus.PENDING_KYC)).thenReturn(1L);
         when(payoutRepository.sumAmountInrByBusiness_IdAndStatus(2L, PayoutStatus.PAID)).thenReturn(new BigDecimal("10000.00"));
         when(campaignRepository.countNearBudgetCapByBusinessId(eq(2L), any(), any())).thenReturn(1L);
+
+        when(campaignRepository.sumMaxBudgetInrByBusinessId(2L)).thenReturn(new BigDecimal("50000.00"));
+        when(payoutRepository.sumAmountInrByBusiness_IdAndStatusIn(eq(2L), any())).thenReturn(new BigDecimal("12000.00"));
+        when(contentRepository.countDistinctCreatorsByBusinessId(2L)).thenReturn(3L);
+
+        when(emptyMetrics.getViews()).thenReturn(0L);
+        when(emptyMetrics.getLikes()).thenReturn(0L);
+        when(emptyMetrics.getComments()).thenReturn(0L);
+        when(emptyMetrics.getPublishedCount()).thenReturn(0L);
+        when(contentRepository.sumMetricsByBusinessAndPublishedAtAfter(eq(2L), any(Instant.class))).thenReturn(emptyMetrics);
+
+        when(campaignRepository.findByBusiness_Id(eq(2L), any(Pageable.class))).thenReturn(Page.empty());
+        when(campaignRepository.findNearBudgetCapByBusinessId(eq(2L), any(), any(), any())).thenReturn(List.of());
+        when(contentRepository.findByBusiness_Id(eq(2L), any(Pageable.class))).thenReturn(Page.empty());
+        when(contentRepository.findTopContentByBusiness(eq(2L), any(Pageable.class))).thenReturn(List.of());
 
         BusinessDashboardResponse result = businessProfileService.dashboard(2L);
 
@@ -86,5 +110,19 @@ class BusinessProfileServiceImplTest {
         assertThat(result.payoutsPendingKycCount()).isEqualTo(1L);
         assertThat(result.totalPaidOutInr()).isEqualByComparingTo("10000.00");
         assertThat(result.campaignsNearBudgetCap()).isEqualTo(1L);
+        assertThat(result.approvedContentCount()).isEqualTo(2L);
+        assertThat(result.rejectedContentCount()).isEqualTo(1L);
+        assertThat(result.participatingCreatorsCount()).isEqualTo(3L);
+        assertThat(result.totalViews()).isZero();
+        assertThat(result.totalEngagement()).isZero();
+        assertThat(result.totalBudgetInr()).isEqualByComparingTo("50000.00");
+        assertThat(result.totalCommittedInr()).isEqualByComparingTo("12000.00");
+        assertThat(result.totalRemainingInr()).isEqualByComparingTo("38000.00");
+        // 3 submissions awaiting review is the only real signal with everything else stubbed empty.
+        assertThat(result.needsAttention()).hasSize(1);
+        assertThat(result.campaignsPreview()).isEmpty();
+        assertThat(result.creatorActivity()).isEmpty();
+        assertThat(result.topContent()).isEmpty();
+        assertThat(result.performance().allTime().views()).isZero();
     }
 }

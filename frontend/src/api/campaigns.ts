@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Campaign, CampaignCategory, CampaignScheduleChange, ManualCampaignStatus, PageResponse } from "@/types";
+import type { Campaign, CampaignAnalytics, CampaignCategory, CampaignScheduleChange, ManualCampaignStatus, PageResponse } from "@/types";
 
 export interface CampaignSearchParams {
   search?: string;
@@ -48,4 +48,5 @@ export const campaignsApi = {
     apiClient.patch<Campaign>(`/campaigns/${id}/schedule`, payload).then((r) => r.data),
   scheduleHistory: (id: number) =>
     apiClient.get<CampaignScheduleChange[]>(`/campaigns/${id}/schedule-history`).then((r) => r.data),
+  analytics: (id: number) => apiClient.get<CampaignAnalytics>(`/campaigns/${id}/analytics`).then((r) => r.data),
 };

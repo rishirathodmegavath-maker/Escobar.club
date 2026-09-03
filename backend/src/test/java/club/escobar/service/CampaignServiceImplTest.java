@@ -580,4 +580,48 @@ class CampaignServiceImplTest {
         assertThat(result.maxBudgetInr()).isNull();
         assertThat(result.committedBudgetInr()).isNull();
     }
+
+    @Test
+    void listRecommendedForCreator_neverExposesBudgetFigures() {
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findOpenNotYetSubmittedByCreator(eq(1L), any(), any()))
+                .thenReturn(List.of(campaign));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, true));
+
+        List<CampaignResponse> result = campaignService.listRecommendedForCreator(1L, 5);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).maxBudgetInr()).isNull();
+        assertThat(result.get(0).committedBudgetInr()).isNull();
+    }
+
+    @Test
+    void getAnalytics_rejectsWhenNotOwningBusiness() {
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+
+        assertThatThrownBy(() -> campaignService.getAnalytics(999L, 5L))
+                .isInstanceOf(ForbiddenActionException.class);
+    }
+
+    @Test
+    void getAnalytics_computesEngagementRateFromViewsLikesComments() {
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findById(5L)).thenReturn(Optional.of(campaign));
+        club.escobar.repository.CampaignMetricsRow metrics = mock(club.escobar.repository.CampaignMetricsRow.class);
+        when(metrics.getViews()).thenReturn(1000L);
+        when(metrics.getLikes()).thenReturn(80L);
+        when(metrics.getComments()).thenReturn(20L);
+        when(metrics.getCreatorsCount()).thenReturn(4L);
+        when(metrics.getPublishedContentCount()).thenReturn(6L);
+        when(contentRepository.findCampaignMetrics(5L)).thenReturn(metrics);
+        when(payoutRepository.sumAmountInrByCampaign_IdAndStatusIn(eq(5L), any())).thenReturn(new BigDecimal("3000.00"));
+
+        var result = campaignService.getAnalytics(2L, 5L);
+
+        assertThat(result.views()).isEqualTo(1000L);
+        assertThat(result.engagementRate()).isEqualTo(10.0);
+        assertThat(result.creatorsCount()).isEqualTo(4L);
+        assertThat(result.budgetCommittedInr()).isEqualByComparingTo("3000.00");
+    }
 }

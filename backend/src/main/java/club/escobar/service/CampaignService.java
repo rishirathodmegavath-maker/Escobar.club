@@ -1,5 +1,6 @@
 package club.escobar.service;
 
+import club.escobar.dto.campaign.CampaignAnalyticsResponse;
 import club.escobar.dto.campaign.CampaignCreateRequest;
 import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
@@ -33,4 +34,10 @@ public interface CampaignService {
     PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable);
 
     CampaignResponse getById(Long campaignId);
+
+    // Open-for-submission campaigns this creator hasn't already submitted to, ranked by
+    // urgent/soonest-deadline. Not niche-personalized - see CampaignServiceImpl for why.
+    List<CampaignResponse> listRecommendedForCreator(Long creatorId, int limit);
+
+    CampaignAnalyticsResponse getAnalytics(Long requestingUserId, Long campaignId);
 }
