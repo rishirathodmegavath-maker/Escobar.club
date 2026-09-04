@@ -5,6 +5,7 @@ import club.escobar.dto.campaign.CampaignResponse;
 import club.escobar.dto.campaign.CampaignScheduleChangeResponse;
 import club.escobar.dto.campaign.CampaignScheduleUpdateRequest;
 import club.escobar.dto.campaign.CampaignUpdateRequest;
+import club.escobar.dto.common.PageResponse;
 import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.CampaignScheduleChange;
@@ -18,6 +19,7 @@ import club.escobar.mapper.CampaignMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
+import club.escobar.repository.CampaignViewsRow;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
@@ -29,6 +31,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -85,7 +89,7 @@ class CampaignServiceImplTest {
                 campaign.getSubmissionOpenAt(), campaign.getSubmissionDeadline(), campaign.getPublishStartAt(),
                 campaign.getPublishEndAt(), campaign.getRatePerThousandViewsInr(), campaign.getStatus(),
                 acceptingSubmissions, false, false, null, null,
-                ApprovalStatus.APPROVED, null, false, Instant.now(), Instant.now(), null);
+                ApprovalStatus.APPROVED, null, false, Instant.now(), Instant.now(), null, null);
     }
 
     @Test
@@ -623,5 +627,47 @@ class CampaignServiceImplTest {
         assertThat(result.engagementRate()).isEqualTo(10.0);
         assertThat(result.creatorsCount()).isEqualTo(4L);
         assertThat(result.budgetCommittedInr()).isEqualByComparingTo("3000.00");
+    }
+
+    // ---- listMine() - Total Views counter ----
+
+    @Test
+    void listMine_populatesTotalViewsFromTheGroupedAggregateQuery() {
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findByBusiness_Id(eq(2L), any())).thenReturn(new PageImpl<>(List.of(campaign)));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, true));
+        CampaignViewsRow row = mock(CampaignViewsRow.class);
+        when(row.getCampaignId()).thenReturn(5L);
+        when(row.getTotalViews()).thenReturn(28000L);
+        when(contentRepository.sumViewsByCampaignIds(List.of(5L))).thenReturn(List.of(row));
+
+        PageResponse<CampaignResponse> result = campaignService.listMine(2L, PageRequest.of(0, 10));
+
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).totalViews()).isEqualTo(28000L);
+    }
+
+    @Test
+    void listMine_defaultsToZeroViewsWhenTheCampaignHasNoAggregateRow() {
+        // No published content, or content with no metrics snapshot yet - the grouped query simply
+        // omits the row rather than returning a zero row, so the service must fill the gap itself.
+        Campaign campaign = upcomingCampaign();
+        when(campaignRepository.findByBusiness_Id(eq(2L), any())).thenReturn(new PageImpl<>(List.of(campaign)));
+        when(campaignMapper.toResponse(campaign)).thenReturn(mapperResponse(campaign, true));
+        when(contentRepository.sumViewsByCampaignIds(List.of(5L))).thenReturn(List.of());
+
+        PageResponse<CampaignResponse> result = campaignService.listMine(2L, PageRequest.of(0, 10));
+
+        assertThat(result.content().get(0).totalViews()).isEqualTo(0L);
+    }
+
+    @Test
+    void listMine_skipsTheViewsQueryWhenTheBusinessHasNoCampaigns() {
+        when(campaignRepository.findByBusiness_Id(eq(2L), any())).thenReturn(new PageImpl<>(List.of()));
+
+        PageResponse<CampaignResponse> result = campaignService.listMine(2L, PageRequest.of(0, 10));
+
+        assertThat(result.content()).isEmpty();
+        verify(contentRepository, never()).sumViewsByCampaignIds(any());
     }
 }

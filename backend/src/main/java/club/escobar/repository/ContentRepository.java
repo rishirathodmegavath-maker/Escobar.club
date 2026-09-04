@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 public interface ContentRepository extends JpaRepository<Content, Long> {
@@ -249,4 +250,23 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             """,
             nativeQuery = true)
     List<BusinessCampaignPreviewRow> findCampaignPreviewAggregatesByBusinessId(@Param("businessId") Long businessId);
+
+    // Backs the "Total Views" counter on Business > My Campaigns: latest-snapshot views summed over
+    // PUBLISHED content only, grouped by campaign - scoped to the campaign ids on the current page
+    // (not a business's whole history) so listing campaigns never has to aggregate more than it's
+    // about to display. Same latest-snapshot-per-content pattern as every other metrics query above.
+    @Query(value = """
+            SELECT c.campaign_id AS campaignId,
+                   COALESCE(SUM(latest.view_count), 0) AS totalViews
+            FROM content c
+            LEFT JOIN (
+                SELECT cms.content_id, cms.view_count,
+                       ROW_NUMBER() OVER (PARTITION BY cms.content_id ORDER BY cms.fetched_at DESC) AS rn
+                FROM content_metrics_snapshots cms
+            ) latest ON latest.content_id = c.id AND latest.rn = 1
+            WHERE c.status = 'PUBLISHED' AND c.campaign_id IN (:campaignIds)
+            GROUP BY c.campaign_id
+            """,
+            nativeQuery = true)
+    List<CampaignViewsRow> sumViewsByCampaignIds(@Param("campaignIds") Collection<Long> campaignIds);
 }

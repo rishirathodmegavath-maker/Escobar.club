@@ -39,6 +39,10 @@ public record CampaignResponse(
         // null while accepting. Unlike maxBudgetInr/committedBudgetInr this never reveals a
         // business's actual budget figures, so it's safe to expose on every endpoint including the
         // public/creator-facing ones.
-        String submissionClosedReason
+        String submissionClosedReason,
+        // Sum of the latest metrics snapshot's viewCount across this campaign's PUBLISHED content.
+        // Only populated on Business > My Campaigns (listMine) - same "only for the owning business"
+        // scoping as maxBudgetInr/committedBudgetInr above; null everywhere else.
+        Long totalViews
 ) {
 }

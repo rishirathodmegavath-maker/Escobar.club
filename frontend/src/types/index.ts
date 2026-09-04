@@ -128,6 +128,10 @@ export interface Campaign {
   canChangeSchedule: boolean;
   createdAt: string;
   updatedAt: string;
+  // Sum of the latest metrics snapshot's viewCount across this campaign's PUBLISHED content. Only
+  // populated on Business > My Campaigns (campaignsApi.mine) - null everywhere else, same scoping
+  // as the budget fields above.
+  totalViews: number | null;
 }
 
 export interface CampaignScheduleChange {

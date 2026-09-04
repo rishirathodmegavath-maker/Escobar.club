@@ -26,6 +26,7 @@ public interface CampaignMapper {
     @Mapping(target = "hot", ignore = true)
     @Mapping(target = "committedBudgetInr", ignore = true)
     @Mapping(target = "submissionClosedReason", ignore = true)
+    @Mapping(target = "totalViews", ignore = true)
     CampaignResponse toResponse(Campaign entity);
 
     @Mapping(target = "changedByUserId", source = "changedBy.id")

@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CompassIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
 import { ChangeScheduleDialog } from "@/features/campaigns/ChangeScheduleDialog";
-import { formatCompactInr } from "@/utils/formatIndianNumber";
+import { formatCompactInr, formatCompactNumber } from "@/utils/formatIndianNumber";
 import type { Campaign, ManualCampaignStatus } from "@/types";
 
 type StatFilter = "LIVE" | "PENDING";
@@ -194,6 +194,7 @@ function CampaignListItem({ campaign }: { campaign: Campaign }) {
               )}
             </p>
           )}
+          <p className="mt-1 font-mono text-xs text-ink-400">👁 {formatCompactNumber(campaign.totalViews ?? 0)} Views</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {campaign.hot && (

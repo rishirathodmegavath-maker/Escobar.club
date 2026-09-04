@@ -23,6 +23,7 @@ import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignMetricsRow;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.CampaignScheduleChangeRepository;
+import club.escobar.repository.CampaignViewsRow;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.PayoutRepository;
 import club.escobar.repository.UserRepository;
@@ -43,8 +44,10 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -270,8 +273,20 @@ public class CampaignServiceImpl implements CampaignService {
     @Transactional(readOnly = true)
     public PageResponse<CampaignResponse> listMine(Long businessUserId, Pageable pageable) {
         BigDecimal rateThreshold = computeActiveRateThreshold();
-        Page<CampaignResponse> page = campaignRepository.findByBusiness_Id(businessUserId, pageable)
-                .map(c -> withBudget(c, withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)), true));
+        Page<Campaign> campaigns = campaignRepository.findByBusiness_Id(businessUserId, pageable);
+
+        // One extra grouped query for exactly the campaign ids on this page - never N+1, and never
+        // aggregates a business's whole campaign history just to render one page of results.
+        List<Long> campaignIds = campaigns.getContent().stream().map(Campaign::getId).toList();
+        Map<Long, Long> totalViewsByCampaignId = campaignIds.isEmpty()
+                ? Map.of()
+                : contentRepository.sumViewsByCampaignIds(campaignIds).stream()
+                        .collect(Collectors.toMap(CampaignViewsRow::getCampaignId, CampaignViewsRow::getTotalViews));
+
+        Page<CampaignResponse> page = campaigns.map(c -> {
+            CampaignResponse response = withBudget(c, withHot(campaignMapper.toResponse(c), c.isHot(rateThreshold)), true);
+            return withTotalViews(response, totalViewsByCampaignId.getOrDefault(c.getId(), 0L));
+        });
         return PageResponse.of(page);
     }
 
@@ -283,7 +298,20 @@ public class CampaignServiceImpl implements CampaignService {
                 response.acceptingSubmissions(), response.urgent(), hot,
                 response.maxBudgetInr(), response.committedBudgetInr(),
                 response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
-                response.createdAt(), response.updatedAt(), response.submissionClosedReason());
+                response.createdAt(), response.updatedAt(), response.submissionClosedReason(), response.totalViews());
+    }
+
+    // Only listMine() ever calls this - every other caller leaves totalViews null, same scoping as
+    // the exposeBudget flag in withBudget() below.
+    private static CampaignResponse withTotalViews(CampaignResponse response, long totalViews) {
+        return new CampaignResponse(response.id(), response.businessId(), response.businessCompanyName(),
+                response.businessLogoUrl(), response.title(), response.description(),
+                response.submissionOpenAt(), response.submissionDeadline(), response.publishStartAt(),
+                response.publishEndAt(), response.ratePerThousandViewsInr(), response.status(),
+                response.acceptingSubmissions(), response.urgent(), response.hot(),
+                response.maxBudgetInr(), response.committedBudgetInr(),
+                response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
+                response.createdAt(), response.updatedAt(), response.submissionClosedReason(), totalViews);
     }
 
     // Recomputes acceptingSubmissions to account for the budget cap (isOpenForSubmissions() alone
@@ -311,7 +339,7 @@ public class CampaignServiceImpl implements CampaignService {
                 exposeBudget ? entity.getMaxBudgetInr() : null,
                 exposeBudget ? committed : null,
                 response.approvalStatus(), response.adminDisplayStatus(), response.canChangeSchedule(),
-                response.createdAt(), response.updatedAt(), closedReason);
+                response.createdAt(), response.updatedAt(), closedReason, response.totalViews());
     }
 
     // Top-quartile rate among campaigns currently open for creator submissions, used as one of the
