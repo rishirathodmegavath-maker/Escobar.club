@@ -7,7 +7,6 @@ import { FullPageSpinner } from "@/components/Spinner";
 import { StatCard } from "@/components/StatCard";
 import { StatusPill } from "@/components/StatusPill";
 import { ProgressBar } from "@/components/ProgressBar";
-import { TimeWindowBars } from "@/components/charts/TimeWindowBars";
 import { ChevronRightIcon } from "@/components/icons";
 import type { ContentStatus } from "@/types";
 
@@ -185,11 +184,6 @@ export function BusinessDashboardPage() {
           </div>
         </div>
       )}
-
-      <div className="card-surface flex flex-col gap-5 p-6">
-        <h2 className="font-display text-lg font-semibold text-ink-900">Performance overview</h2>
-        <TimeWindowBars summary={data.performance} />
-      </div>
 
       {data.campaignsPreview.length > 0 && (
         <div className="flex flex-col gap-3">

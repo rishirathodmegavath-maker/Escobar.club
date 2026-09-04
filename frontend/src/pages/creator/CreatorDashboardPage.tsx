@@ -6,7 +6,6 @@ import { Avatar } from "@/components/Avatar";
 import { StatCard } from "@/components/StatCard";
 import { StatusPill } from "@/components/StatusPill";
 import { ProgressBar } from "@/components/ProgressBar";
-import { TimeWindowBars } from "@/components/charts/TimeWindowBars";
 import { DiscoverCampaignCard } from "@/features/campaigns/DiscoverCampaignCard";
 import { Button } from "@/components/Button";
 import { ChevronRightIcon, SparkIcon } from "@/components/icons";
@@ -172,11 +171,6 @@ export function CreatorDashboardPage() {
             </Link>
           ))}
         </div>
-      </div>
-
-      <div className="card-surface flex flex-col gap-5 p-6">
-        <h2 className="font-display text-lg font-semibold text-ink-900">Performance</h2>
-        <TimeWindowBars summary={data.performance} />
       </div>
 
       {data.topContent.length > 0 && (
