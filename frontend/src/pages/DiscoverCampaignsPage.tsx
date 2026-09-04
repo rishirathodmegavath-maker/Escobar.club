@@ -10,6 +10,7 @@ import { CompassIcon, ChevronRightIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
 import { Tabs } from "@/components/Tabs";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { CampaignCategory } from "@/types";
 
 const CATEGORY_TABS: { label: string; value: CampaignCategory }[] = [
@@ -100,7 +101,8 @@ export function DiscoverCampaignsPage() {
                   {data.content[0].title}
                 </h2>
                 <p className="text-sm text-ink-500">
-                  {data.content[0].businessCompanyName} · ₹{data.content[0].ratePerThousandViewsInr} per 1,000 views
+                  {data.content[0].businessCompanyName} · {formatCompactInr(data.content[0].ratePerThousandViewsInr, 0)} per 1,000
+                  views
                 </p>
               </div>
               <ChevronRightIcon className="h-5 w-5 shrink-0 text-ink-300 transition-colors group-hover:text-signal-700" />

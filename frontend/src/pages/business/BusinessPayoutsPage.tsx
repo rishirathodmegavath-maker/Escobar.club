@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pagination } from "@/components/Pagination";
 import { Tabs } from "@/components/Tabs";
 import { CoinIcon } from "@/components/icons";
+import { formatCompactInr, formatCompactNumber } from "@/utils/formatIndianNumber";
 import type { PayoutStatus } from "@/types";
 
 const tabs: { label: string; value: PayoutStatus | undefined }[] = [
@@ -21,8 +22,6 @@ const tabs: { label: string; value: PayoutStatus | undefined }[] = [
   { label: "Paid", value: "PAID" },
   { label: "All", value: undefined },
 ];
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
 function parseStatusParam(raw: string | null): PayoutStatus | undefined {
   if (raw === null) return "PAYABLE";
@@ -150,8 +149,8 @@ export function BusinessPayoutsPage() {
                 <tr key={payout.id} className="border-b border-ink-100 last:border-0 text-ink-700">
                   <td className="px-5 py-3.5 font-medium text-ink-900">{payout.creatorDisplayName ?? "—"}</td>
                   <td className="px-5 py-3.5">{payout.campaignTitle}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{payout.viewCountUsed.toLocaleString()}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{inrFormatter.format(payout.amountInr)}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactNumber(payout.viewCountUsed)}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactInr(payout.amountInr)}</td>
                   <td className="px-5 py-3.5">
                     <StatusPill status={payout.status} />
                     {payout.status === "PAID" && payout.paidAt && (

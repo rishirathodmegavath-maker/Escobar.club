@@ -8,9 +8,8 @@ import { Input } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { EmptyState } from "@/components/EmptyState";
 import { CoinIcon } from "@/components/icons";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { WalletTransaction } from "@/types";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
 function invalidateWalletQueries(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ["admin", "wallets"] });
@@ -131,7 +130,7 @@ export function AdminWalletTransactionTable({
                 }`}
               >
                 {t.type === "CREDIT" ? "+" : "−"}
-                {inrFormatter.format(t.amountInr)}
+                {formatCompactInr(t.amountInr)}
               </td>
               <td className="px-5 py-3.5">
                 <StatusPill status={t.status} />

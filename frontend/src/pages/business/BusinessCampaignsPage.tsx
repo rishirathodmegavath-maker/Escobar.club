@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CompassIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
 import { ChangeScheduleDialog } from "@/features/campaigns/ChangeScheduleDialog";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { Campaign, ManualCampaignStatus } from "@/types";
 
 type StatFilter = "LIVE" | "PENDING";
@@ -53,7 +54,7 @@ const schema = z
   });
 type FormValues = z.infer<typeof schema>;
 
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const inrFormatter = { format: (value: number) => formatCompactInr(value, 0) };
 
 function CampaignForm({
   defaultValues,

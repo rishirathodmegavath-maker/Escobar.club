@@ -3,6 +3,7 @@ import { creatorsApi } from "@/api/creators";
 import { Spinner } from "@/components/Spinner";
 import { TickMeter } from "@/components/TickMeter";
 import { Avatar } from "@/components/Avatar";
+import { formatCompactNumber } from "@/utils/formatIndianNumber";
 
 export function CreatorProfileInline({ creatorId, hideHeader }: { creatorId: number; hideHeader?: boolean }) {
   const { data, isLoading } = useQuery({
@@ -38,7 +39,7 @@ export function CreatorProfileInline({ creatorId, hideHeader }: { creatorId: num
       </div>
       <div className="flex flex-col gap-4">
         <TickMeter
-          label={`${data.followerCount.toLocaleString()} followers (self-reported)`}
+          label={`${formatCompactNumber(data.followerCount)} followers (self-reported)`}
           value={data.followerCount}
           max={100000}
           accent="gold"

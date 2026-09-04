@@ -9,9 +9,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pagination } from "@/components/Pagination";
 import { CoinIcon } from "@/components/icons";
 import { AddMoneyModal } from "@/components/AddMoneyModal";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { WalletTransaction } from "@/types";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
 function descriptionFor(t: WalletTransaction): string {
   if (t.fundingSource === "CAMPAIGN_PAYMENT") return t.campaignTitle ? `Payout for ${t.campaignTitle}` : "Campaign payout";
@@ -54,7 +53,7 @@ export function BusinessWalletPage() {
           <div className="hero-card flex flex-wrap items-center justify-between gap-6">
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Available balance</span>
-              <span className="font-display text-4xl font-bold text-ink-900">{inrFormatter.format(summary.availableBalanceInr)}</span>
+              <span className="font-display text-4xl font-bold text-ink-900">{formatCompactInr(summary.availableBalanceInr)}</span>
             </div>
             <Button onClick={() => setAddingMoney(true)}>+ Add Money</Button>
           </div>
@@ -62,11 +61,11 @@ export function BusinessWalletPage() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="card-surface flex flex-col gap-1 p-6">
               <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Total added</span>
-              <span className="font-display text-2xl font-semibold text-ink-900">{inrFormatter.format(summary.totalAddedInr)}</span>
+              <span className="font-display text-2xl font-semibold text-ink-900">{formatCompactInr(summary.totalAddedInr)}</span>
             </div>
             <div className="card-surface flex flex-col gap-1 p-6">
               <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Total paid</span>
-              <span className="font-display text-2xl font-semibold text-ink-900">{inrFormatter.format(summary.totalPaidInr)}</span>
+              <span className="font-display text-2xl font-semibold text-ink-900">{formatCompactInr(summary.totalPaidInr)}</span>
             </div>
           </div>
         </>
@@ -104,7 +103,7 @@ export function BusinessWalletPage() {
                     }`}
                   >
                     {t.type === "CREDIT" ? "+" : "−"}
-                    {inrFormatter.format(t.amountInr)}
+                    {formatCompactInr(t.amountInr)}
                   </td>
                   <td className="px-5 py-3.5">
                     <StatusPill status={t.status} />

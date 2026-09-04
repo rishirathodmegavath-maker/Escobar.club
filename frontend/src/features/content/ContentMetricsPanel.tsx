@@ -6,11 +6,10 @@ import { Spinner } from "@/components/Spinner";
 import { metricsApi } from "@/api/metrics";
 import { extractErrorMessage } from "@/api/client";
 import { useToast } from "@/components/Toast";
-
-const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+import { formatCompactNumber } from "@/utils/formatIndianNumber";
 
 function formatCount(value: number | null): string {
-  return value === null ? "—" : compactNumber.format(value);
+  return value === null ? "—" : formatCompactNumber(value);
 }
 
 function timeAgo(iso: string): string {
@@ -66,7 +65,7 @@ export function ContentMetricsPanel({ content }: { content: ContentRecord }) {
             <div className="rounded-lg bg-gold-soft px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-wide text-gold-deep">Total views</p>
               <p className="font-mono text-lg font-semibold text-ink-900">
-                {latest?.viewCount == null ? "—" : latest.viewCount.toLocaleString()}
+                {latest?.viewCount == null ? "—" : formatCompactNumber(latest.viewCount)}
               </p>
             </div>
           </div>

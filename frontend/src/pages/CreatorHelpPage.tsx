@@ -3,19 +3,14 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/Button";
 import { PersonPlusIcon, VideoIcon, EyeIcon, CoinIcon } from "@/components/icons";
+import { formatCompactInr, formatCompactNumber } from "@/utils/formatIndianNumber";
 
 const RATE_PER_1000_VIEWS_INR = 100;
 const ELIGIBILITY_THRESHOLD_VIEWS = 5000;
 const VIEW_STEP = 10_000;
 const QUICK_VIEW_OPTIONS = [50_000, 100_000, 500_000, 1_000_000];
 
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
-
-function formatViewCount(views: number): string {
-  if (views >= 1_000_000) return `${views / 1_000_000}M`;
-  if (views >= 1_000) return `${views / 1000}k`;
-  return `${views}`;
-}
+const inrFormatter = { format: (value: number) => formatCompactInr(value, 0) };
 
 export function CreatorHelpPage() {
   const [totalViews, setTotalViews] = useState(100_000);
@@ -100,7 +95,7 @@ export function CreatorHelpPage() {
                   onClick={() => setTotalViews(views)}
                   className="focus-ring rounded-full border border-ink-200 bg-surface px-3 py-1.5 font-mono text-xs font-medium text-ink-600 transition-colors hover:border-signal-300 hover:bg-signal-soft hover:text-signal-deep"
                 >
-                  {formatViewCount(views)} views
+                  {formatCompactNumber(views)} views
                 </button>
               ))}
             </div>
@@ -163,7 +158,7 @@ export function CreatorHelpPage() {
             icon={<CoinIcon className="h-6 w-6" />}
             iconClassName="bg-signal-soft text-signal-deep"
             title="Earn money"
-            description={`Get paid per view after crossing the ${ELIGIBILITY_THRESHOLD_VIEWS.toLocaleString("en-IN")}-view threshold. The business settles your payout once you're eligible.`}
+            description={`Get paid per view after crossing the ${formatCompactNumber(ELIGIBILITY_THRESHOLD_VIEWS)}-view threshold. The business settles your payout once you're eligible.`}
             footnote="Transparent, per-campaign rates"
           />
         </div>

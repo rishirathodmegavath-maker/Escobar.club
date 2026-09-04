@@ -9,9 +9,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { DiscoverCampaignCard } from "@/features/campaigns/DiscoverCampaignCard";
 import { Button } from "@/components/Button";
 import { ChevronRightIcon, SparkIcon } from "@/components/icons";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-const numberFormatter = new Intl.NumberFormat("en-IN");
+import { formatCompactInr, formatCompactNumber } from "@/utils/formatIndianNumber";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -87,12 +85,12 @@ export function CreatorDashboardPage() {
         <StatCard label="Active campaigns" value={String(data.activeCampaignsCount)} to="/creator/content" />
         <StatCard
           label="Payable earnings"
-          value={inrFormatter.format(data.earnings.payableInr)}
+          value={formatCompactInr(data.earnings.payableInr)}
           to="/creator/payouts"
         />
         <StatCard
           label="Paid this month"
-          value={inrFormatter.format(data.earnings.thisMonthPaidInr)}
+          value={formatCompactInr(data.earnings.thisMonthPaidInr)}
           to="/creator/payouts"
         />
       </div>
@@ -133,8 +131,8 @@ export function CreatorDashboardPage() {
                     <td className="px-5 py-3.5">
                       <StatusPill status={c.status as "UPCOMING" | "LIVE"} />
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{numberFormatter.format(c.views)}</td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{inrFormatter.format(c.earningsInr)}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactNumber(c.views)}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactInr(c.earningsInr)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -182,7 +180,7 @@ export function CreatorDashboardPage() {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-ink-900">{item.campaignTitle}</p>
                   <p className="text-xs text-ink-400">
-                    {numberFormatter.format(item.views)} views · {numberFormatter.format(item.likes)} likes ·{" "}
+                    {formatCompactNumber(item.views)} views · {formatCompactNumber(item.likes)} likes ·{" "}
                     {item.engagementRate}% engagement
                   </p>
                 </div>
@@ -211,10 +209,10 @@ export function CreatorDashboardPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Stat label="Pending KYC" value={inrFormatter.format(data.earnings.pendingKycInr)} />
-            <Stat label="Payable" value={inrFormatter.format(data.earnings.payableInr)} />
-            <Stat label="Paid to date" value={inrFormatter.format(data.earnings.paidInr)} />
-            <Stat label="Paid this month" value={inrFormatter.format(data.earnings.thisMonthPaidInr)} />
+            <Stat label="Pending KYC" value={formatCompactInr(data.earnings.pendingKycInr)} />
+            <Stat label="Payable" value={formatCompactInr(data.earnings.payableInr)} />
+            <Stat label="Paid to date" value={formatCompactInr(data.earnings.paidInr)} />
+            <Stat label="Paid this month" value={formatCompactInr(data.earnings.thisMonthPaidInr)} />
           </div>
           {data.recentPayouts.length > 0 && (
             <div className="flex flex-col gap-1.5 border-t border-ink-100 pt-3">
@@ -222,7 +220,7 @@ export function CreatorDashboardPage() {
                 <div key={p.contentId} className="flex items-center justify-between text-sm">
                   <span className="truncate text-ink-600">{p.campaignTitle}</span>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-mono tabular-nums text-ink-900">{inrFormatter.format(p.amountInr)}</span>
+                    <span className="font-mono tabular-nums text-ink-900">{formatCompactInr(p.amountInr)}</span>
                     <StatusPill status={p.status} />
                   </span>
                 </div>

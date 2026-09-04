@@ -8,10 +8,11 @@ import { Avatar } from "@/components/Avatar";
 import { StatusPill } from "@/components/StatusPill";
 import { ContentSubmitCard } from "@/features/content/ContentSubmitCard";
 import { KycGateNotice } from "@/features/content/KycGateNotice";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { Campaign, CreatorKycProfile } from "@/types";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" });
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const inrFormatter = { format: (value: number) => formatCompactInr(value, 0) };
 
 function daysUntil(dateStr: string): number {
   const today = new Date();

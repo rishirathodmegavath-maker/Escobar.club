@@ -4,8 +4,7 @@ import { adminApi } from "@/api/admin";
 import { FullPageSpinner } from "@/components/Spinner";
 import { StatusPill } from "@/components/StatusPill";
 import { ChevronRightIcon, CoinIcon } from "@/components/icons";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 
 function StatCard({ label, value, to }: { label: string; value: number | string; to: string }) {
   return (
@@ -73,9 +72,9 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard label="Total funds held" value={inrFormatter.format(data.totalFundsHeldInr)} to="/admin/wallets" />
-            <StatCard label="Total paid" value={inrFormatter.format(data.totalPaidInr)} to="/admin/wallets?tab=activity" />
-            <StatCard label="Total available" value={inrFormatter.format(data.totalAvailableInr)} to="/admin/wallets" />
+            <StatCard label="Total funds held" value={formatCompactInr(data.totalFundsHeldInr, 0)} to="/admin/wallets" />
+            <StatCard label="Total paid" value={formatCompactInr(data.totalPaidInr, 0)} to="/admin/wallets?tab=activity" />
+            <StatCard label="Total available" value={formatCompactInr(data.totalAvailableInr, 0)} to="/admin/wallets" />
             <StatCard label="Businessman wallets" value={data.activeWalletsCount} to="/admin/wallets" />
             <StatCard
               label="Pending top-ups"
@@ -104,7 +103,7 @@ export function AdminDashboardPage() {
                     <div className="flex flex-col items-end gap-1">
                       <span className={`font-mono text-sm tabular-nums ${t.type === "CREDIT" ? "text-mint-deep" : "text-ink-700"}`}>
                         {t.type === "CREDIT" ? "+" : "−"}
-                        {inrFormatter.format(t.amountInr)}
+                        {formatCompactInr(t.amountInr, 0)}
                       </span>
                       <StatusPill status={t.status} />
                     </div>

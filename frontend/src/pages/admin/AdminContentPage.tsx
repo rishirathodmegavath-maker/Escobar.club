@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pagination } from "@/components/Pagination";
 import { Tabs } from "@/components/Tabs";
 import { EyeIcon } from "@/components/icons";
+import { formatCompactNumber } from "@/utils/formatIndianNumber";
 import type { ContentStatus } from "@/types";
 
 const tabs: { label: string; value: ContentStatus | undefined }[] = [
@@ -29,12 +30,10 @@ function parseStatusParam(raw: string | null): ContentStatus | undefined {
   return raw as ContentStatus;
 }
 
-const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-
 // The backend omits null fields from its JSON entirely (no metrics synced yet), so these arrive
 // as `undefined`, not `null` - guard against both.
 function formatCount(value: number | null | undefined): string {
-  return value == null ? "—" : compactNumber.format(value);
+  return value == null ? "—" : formatCompactNumber(value);
 }
 
 function timeAgo(iso: string | null | undefined): string {

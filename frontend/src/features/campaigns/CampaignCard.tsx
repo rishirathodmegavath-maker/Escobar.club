@@ -2,9 +2,10 @@ import { Link } from "react-router-dom";
 import type { Campaign } from "@/types";
 import { Avatar } from "@/components/Avatar";
 import { StatusPill } from "@/components/StatusPill";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const inrFormatter = { format: (value: number) => formatCompactInr(value, 0) };
 
 function formatDateRange(startDate: string, endDate: string): string {
   return `${dateFormatter.format(new Date(startDate))} – ${dateFormatter.format(new Date(endDate))}`;

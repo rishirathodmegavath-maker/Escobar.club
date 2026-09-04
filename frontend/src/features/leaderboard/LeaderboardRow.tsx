@@ -2,8 +2,7 @@ import clsx from "clsx";
 import { Link } from "react-router-dom";
 import type { LeaderboardEntry } from "@/types";
 import { Avatar } from "@/components/Avatar";
-
-const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+import { formatCompactNumber } from "@/utils/formatIndianNumber";
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
@@ -40,7 +39,7 @@ export function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
       </td>
       <td className="py-3 pr-4 text-right font-mono tabular-nums text-ink-600">{entry.publishedContentCount}</td>
       <td className="py-3 pr-4 text-right font-mono text-base font-semibold tabular-nums text-ink-900">
-        {compactNumber.format(entry.totalViews)}
+        {formatCompactNumber(entry.totalViews)}
       </td>
     </tr>
   );

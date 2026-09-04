@@ -12,9 +12,8 @@ import { Tabs } from "@/components/Tabs";
 import { Button } from "@/components/Button";
 import { CoinIcon } from "@/components/icons";
 import { AdminWalletTransactionTable } from "@/features/wallet/AdminWalletTransactionTable";
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 import type { WalletTransactionStatus, WalletTransactionType } from "@/types";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
 const searchInputClasses =
   "focus-ring w-full max-w-sm rounded-[10px] border border-ink-200 bg-surface-input px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 sm:max-w-xs";
@@ -70,9 +69,9 @@ function WalletsTab() {
                       {wallet.businessName ?? `Business #${wallet.businessId}`}
                     </Link>
                   </td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{inrFormatter.format(wallet.availableBalanceInr)}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{inrFormatter.format(wallet.totalAddedInr)}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{inrFormatter.format(wallet.totalPaidInr)}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactInr(wallet.availableBalanceInr)}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactInr(wallet.totalAddedInr)}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactInr(wallet.totalPaidInr)}</td>
                   <td className="px-5 py-3.5 text-xs text-ink-400">
                     {wallet.lastActivityAt ? new Date(wallet.lastActivityAt).toLocaleString() : "—"}
                   </td>

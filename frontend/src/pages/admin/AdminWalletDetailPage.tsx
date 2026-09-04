@@ -7,8 +7,7 @@ import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/Button";
 import { AdminCreditModal } from "@/components/AdminCreditModal";
 import { AdminWalletTransactionTable } from "@/features/wallet/AdminWalletTransactionTable";
-
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+import { formatCompactInr } from "@/utils/formatIndianNumber";
 
 export function AdminWalletDetailPage() {
   const { businessId } = useParams<{ businessId: string }>();
@@ -40,7 +39,7 @@ export function AdminWalletDetailPage() {
       <div className="hero-card flex flex-wrap items-center justify-between gap-6">
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Current balance</span>
-          <span className="font-display text-4xl font-bold text-ink-900">{inrFormatter.format(summary.availableBalanceInr)}</span>
+          <span className="font-display text-4xl font-bold text-ink-900">{formatCompactInr(summary.availableBalanceInr)}</span>
         </div>
         <Button onClick={() => setCrediting(true)}>Credit wallet</Button>
       </div>
@@ -48,11 +47,11 @@ export function AdminWalletDetailPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="card-surface flex flex-col gap-1 p-6">
           <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Total added</span>
-          <span className="font-display text-2xl font-semibold text-ink-900">{inrFormatter.format(summary.totalAddedInr)}</span>
+          <span className="font-display text-2xl font-semibold text-ink-900">{formatCompactInr(summary.totalAddedInr)}</span>
         </div>
         <div className="card-surface flex flex-col gap-1 p-6">
           <span className="text-xs font-medium uppercase tracking-wide text-ink-400">Total paid</span>
-          <span className="font-display text-2xl font-semibold text-ink-900">{inrFormatter.format(summary.totalPaidInr)}</span>
+          <span className="font-display text-2xl font-semibold text-ink-900">{formatCompactInr(summary.totalPaidInr)}</span>
         </div>
       </div>
 

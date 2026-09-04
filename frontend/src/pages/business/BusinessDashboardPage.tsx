@@ -8,10 +8,9 @@ import { StatCard } from "@/components/StatCard";
 import { StatusPill } from "@/components/StatusPill";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ChevronRightIcon } from "@/components/icons";
+import { formatCompactInr, formatCompactNumber } from "@/utils/formatIndianNumber";
 import type { ContentStatus } from "@/types";
 
-const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-const numberFormatter = new Intl.NumberFormat("en-IN");
 const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });
 
 const CONTENT_STATUS_TILES: { label: string; status: ContentStatus }[] = [
@@ -55,7 +54,7 @@ function CampaignAnalyticsSection({ campaigns }: { campaigns: { campaignId: numb
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Views</span>
-            <span className="font-display text-xl font-semibold text-ink-900">{numberFormatter.format(data.views)}</span>
+            <span className="font-display text-xl font-semibold text-ink-900">{formatCompactNumber(data.views)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Engagement</span>
@@ -67,7 +66,7 @@ function CampaignAnalyticsSection({ campaigns }: { campaigns: { campaignId: numb
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Committed</span>
-            <span className="font-display text-xl font-semibold text-ink-900">{inrFormatter.format(data.budgetCommittedInr)}</span>
+            <span className="font-display text-xl font-semibold text-ink-900">{formatCompactInr(data.budgetCommittedInr)}</span>
           </div>
         </div>
       )}
@@ -120,7 +119,7 @@ export function BusinessDashboardPage() {
           <p className="text-sm text-ink-500">
             {!approved
               ? "You can't create campaigns until an admin approves your account. Check back soon."
-              : `${data.contentAwaitingReview} content awaiting your review · ${inrFormatter.format(data.payoutsPayableAmountInr)} payable across ${data.payoutsPayableCount} creator${data.payoutsPayableCount === 1 ? "" : "s"}`}
+              : `${data.contentAwaitingReview} content awaiting your review · ${formatCompactInr(data.payoutsPayableAmountInr)} payable across ${data.payoutsPayableCount} creator${data.payoutsPayableCount === 1 ? "" : "s"}`}
           </p>
         </div>
       </div>
@@ -140,7 +139,7 @@ export function BusinessDashboardPage() {
         />
         <StatCard
           label="Payouts ready to pay"
-          value={inrFormatter.format(data.payoutsPayableAmountInr)}
+          value={formatCompactInr(data.payoutsPayableAmountInr)}
           sublabel={`Across ${data.payoutsPayableCount} creator${data.payoutsPayableCount === 1 ? "" : "s"}`}
           to="/business/payouts?status=PAYABLE"
         />
@@ -212,9 +211,9 @@ export function BusinessDashboardPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono tabular-nums">{c.creatorsCount}</td>
                     <td className="px-5 py-3.5 text-right font-mono tabular-nums">{c.contentPublishedCount}</td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{numberFormatter.format(c.views)}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">{formatCompactNumber(c.views)}</td>
                     <td className="px-5 py-3.5 text-right font-mono tabular-nums">
-                      {c.maxBudgetInr ? `${inrFormatter.format(c.committedBudgetInr)} / ${inrFormatter.format(c.maxBudgetInr)}` : "Unlimited"}
+                      {c.maxBudgetInr ? `${formatCompactInr(c.committedBudgetInr)} / ${formatCompactInr(c.maxBudgetInr)}` : "Unlimited"}
                     </td>
                   </tr>
                 ))}
@@ -263,15 +262,15 @@ export function BusinessDashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Total budget</span>
-            <span className="font-display text-lg font-semibold text-ink-900">{inrFormatter.format(data.totalBudgetInr)}</span>
+            <span className="font-display text-lg font-semibold text-ink-900">{formatCompactInr(data.totalBudgetInr)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Committed</span>
-            <span className="font-display text-lg font-semibold text-ink-900">{inrFormatter.format(data.totalCommittedInr)}</span>
+            <span className="font-display text-lg font-semibold text-ink-900">{formatCompactInr(data.totalCommittedInr)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs uppercase tracking-wide text-ink-400">Remaining</span>
-            <span className="font-display text-lg font-semibold text-ink-900">{inrFormatter.format(data.totalRemainingInr)}</span>
+            <span className="font-display text-lg font-semibold text-ink-900">{formatCompactInr(data.totalRemainingInr)}</span>
           </div>
         </div>
         <p className="text-xs text-ink-400">Only campaigns with a spend cap set are included in this total.</p>
@@ -290,7 +289,7 @@ export function BusinessDashboardPage() {
                     {item.creatorDisplayName} · {item.campaignTitle}
                   </p>
                   <p className="text-xs text-ink-400">
-                    {numberFormatter.format(item.views)} views · {numberFormatter.format(item.likes)} likes ·{" "}
+                    {formatCompactNumber(item.views)} views · {formatCompactNumber(item.likes)} likes ·{" "}
                     {item.engagementRate}% engagement
                   </p>
                 </div>
