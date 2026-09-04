@@ -10,6 +10,7 @@ import club.escobar.dto.admin.CampaignDisplayStatusUpdateRequest;
 import club.escobar.dto.common.PageResponse;
 import club.escobar.dto.kyc.CreatorKycReviewDetailResponse;
 import club.escobar.dto.kyc.CreatorKycReviewRequest;
+import club.escobar.dto.wallet.WalletTransactionResponse;
 import club.escobar.entity.BusinessProfile;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
@@ -20,11 +21,15 @@ import club.escobar.entity.CreatorProfile;
 import club.escobar.entity.User;
 import club.escobar.entity.enums.ApprovalStatus;
 import club.escobar.entity.enums.ContentStatus;
+import club.escobar.entity.enums.FundingSource;
 import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.UserRole;
+import club.escobar.entity.enums.WalletTransactionStatus;
+import club.escobar.entity.enums.WalletTransactionType;
 import club.escobar.exception.ForbiddenActionException;
 import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.exception.ResourceNotFoundException;
+import club.escobar.mapper.WalletTransactionMapper;
 import club.escobar.repository.BusinessProfileRepository;
 import club.escobar.repository.CampaignRepository;
 import club.escobar.repository.ContentMetricsSnapshotRepository;
@@ -33,6 +38,7 @@ import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.CreatorProfileRepository;
 import club.escobar.repository.RefreshTokenRepository;
 import club.escobar.repository.UserRepository;
+import club.escobar.repository.WalletTransactionRepository;
 import club.escobar.service.AdminService;
 import club.escobar.service.CreatorKycService;
 import lombok.RequiredArgsConstructor;
@@ -44,13 +50,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminServiceImpl.class);
+
+    // Mirrors WalletServiceImpl's identical constants - see the comment there. Duplicated per-class
+    // rather than shared, same idiom as COMMITTED_PAYOUT_STATUSES across CampaignServiceImpl/
+    // BusinessProfileServiceImpl/ContentServiceImpl.
+    private static final Set<FundingSource> MANUAL_CREDIT_SOURCES = EnumSet.of(FundingSource.BUSINESSMAN_MANUAL, FundingSource.ADMIN_MANUAL);
+    private static final Set<FundingSource> CAMPAIGN_PAYMENT_SOURCE = EnumSet.of(FundingSource.CAMPAIGN_PAYMENT);
 
     private final UserRepository userRepository;
     private final CreatorProfileRepository creatorProfileRepository;
@@ -61,16 +77,37 @@ public class AdminServiceImpl implements AdminService {
     private final ContentMetricsSnapshotRepository contentMetricsSnapshotRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CreatorKycService creatorKycService;
+    private final WalletTransactionRepository walletTransactionRepository;
+    private final WalletTransactionMapper walletTransactionMapper;
 
     @Override
     @Transactional(readOnly = true)
     public AdminDashboardResponse dashboard() {
+        BigDecimal totalFundsHeldInr = walletTransactionRepository.sumAmountInrByTypeAndStatusAndFundingSourceIn(
+                WalletTransactionType.CREDIT, WalletTransactionStatus.CONFIRMED, MANUAL_CREDIT_SOURCES);
+        BigDecimal totalPaidInr = walletTransactionRepository.sumAmountInrByTypeAndStatusAndFundingSourceIn(
+                WalletTransactionType.DEBIT, WalletTransactionStatus.CONFIRMED, CAMPAIGN_PAYMENT_SOURCE);
+        BigDecimal totalCreditAll = walletTransactionRepository.sumAmountInrByTypeAndStatus(
+                WalletTransactionType.CREDIT, WalletTransactionStatus.CONFIRMED);
+        BigDecimal totalDebitAll = walletTransactionRepository.sumAmountInrByTypeAndStatus(
+                WalletTransactionType.DEBIT, WalletTransactionStatus.CONFIRMED);
+        List<WalletTransactionResponse> recentWalletActivity = walletTransactionRepository.findTop5ByOrderByCreatedAtDesc()
+                .stream()
+                .map(walletTransactionMapper::toResponse)
+                .toList();
+
         return new AdminDashboardResponse(
                 businessProfileRepository.count(),
                 userRepository.countByRole(UserRole.CREATOR),
                 campaignRepository.count(),
                 campaignRepository.countByApprovalStatus(ApprovalStatus.PENDING),
-                creatorKycProfileRepository.countByStatus(KycStatus.PENDING)
+                creatorKycProfileRepository.countByStatus(KycStatus.PENDING),
+                totalFundsHeldInr,
+                totalPaidInr,
+                totalCreditAll.subtract(totalDebitAll),
+                businessProfileRepository.countByApprovalStatus(ApprovalStatus.APPROVED),
+                walletTransactionRepository.countByStatus(WalletTransactionStatus.PENDING),
+                recentWalletActivity
         );
     }
 

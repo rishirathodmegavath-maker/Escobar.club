@@ -21,6 +21,7 @@ import { CreatorKycPage } from "@/pages/creator/CreatorKycPage";
 import { BusinessDashboardPage } from "@/pages/business/BusinessDashboardPage";
 import { BusinessContentReviewPage } from "@/pages/business/BusinessContentReviewPage";
 import { BusinessPayoutsPage } from "@/pages/business/BusinessPayoutsPage";
+import { BusinessWalletPage } from "@/pages/business/BusinessWalletPage";
 import { BusinessCreatorProfilePage } from "@/pages/business/BusinessCreatorProfilePage";
 import { BusinessProfilePage } from "@/pages/business/BusinessProfilePage";
 import { BusinessProfileViewPage } from "@/pages/business/BusinessProfileViewPage";
@@ -35,6 +36,8 @@ import { AdminCreatorsPage } from "@/pages/admin/AdminCreatorsPage";
 import { AdminBusinessesPage } from "@/pages/admin/AdminBusinessesPage";
 import { AdminCampaignsPage } from "@/pages/admin/AdminCampaignsPage";
 import { AdminContentPage } from "@/pages/admin/AdminContentPage";
+import { AdminWalletsPage } from "@/pages/admin/AdminWalletsPage";
+import { AdminWalletDetailPage } from "@/pages/admin/AdminWalletDetailPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -165,6 +168,16 @@ export default function App() {
         }
       />
       <Route
+        path="/business/wallet"
+        element={
+          <ProtectedRoute allowedRoles={["BUSINESS"]}>
+            <AppShell>
+              <BusinessWalletPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/business/creators/:creatorId"
         element={
           <ProtectedRoute allowedRoles={["BUSINESS"]}>
@@ -282,6 +295,26 @@ export default function App() {
           <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
             <AppShell>
               <AdminContentPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/wallets"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
+            <AppShell>
+              <AdminWalletsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/wallets/:businessId"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]} loginPath="/admin/login">
+            <AppShell>
+              <AdminWalletDetailPage />
             </AppShell>
           </ProtectedRoute>
         }

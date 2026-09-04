@@ -18,6 +18,8 @@ public interface BusinessProfileRepository extends JpaRepository<BusinessProfile
 
     boolean existsByGstNumberAndUser_IdNot(String gstNumber, Long userId);
 
+    long countByApprovalStatus(ApprovalStatus status);
+
     @Query("""
             select b from BusinessProfile b
             where b.approvalStatus = club.escobar.entity.enums.ApprovalStatus.APPROVED

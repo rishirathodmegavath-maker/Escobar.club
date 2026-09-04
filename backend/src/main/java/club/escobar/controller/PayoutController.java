@@ -6,6 +6,7 @@ import club.escobar.dto.payout.PayoutResponse;
 import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.security.SecurityUser;
 import club.escobar.service.PayoutService;
+import club.escobar.util.CsvUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -80,24 +81,15 @@ public class PayoutController {
             writer.println("Creator,Campaign,Views Used,Amount (INR),Status,Paid At");
             for (PayoutResponse p : payouts) {
                 writer.println(String.join(",",
-                        csvField(p.creatorDisplayName()),
-                        csvField(p.campaignTitle()),
-                        csvField(p.viewCountUsed() == null ? "" : String.valueOf(p.viewCountUsed())),
-                        csvField(p.amountInr() == null ? "" : p.amountInr().toPlainString()),
-                        csvField(p.status() == null ? "" : p.status().name()),
-                        csvField(p.paidAt() == null ? "" : DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(p.paidAt()))));
+                        CsvUtil.csvField(p.creatorDisplayName()),
+                        CsvUtil.csvField(p.campaignTitle()),
+                        CsvUtil.csvField(p.viewCountUsed() == null ? "" : String.valueOf(p.viewCountUsed())),
+                        CsvUtil.csvField(p.amountInr() == null ? "" : p.amountInr().toPlainString()),
+                        CsvUtil.csvField(p.status() == null ? "" : p.status().name()),
+                        CsvUtil.csvField(p.paidAt() == null ? "" : DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(p.paidAt()))));
             }
         }
         return out.toByteArray();
-    }
-
-    // Quotes every field and escapes embedded quotes for correct CSV encoding. Also guards against
-    // formula injection: a cell value starting with =/+/-/@ is executed as a formula by Excel/Sheets
-    // regardless of CSV quoting, so a leading apostrophe is inserted to force it to be read as text -
-    // relevant here because creator display names and campaign titles are user-supplied.
-    private static String csvField(String value) {
-        String safe = value.matches("^[=+\\-@\\t\\r].*") ? "'" + value : value;
-        return "\"" + safe.replace("\"", "\"\"") + "\"";
     }
 
     @PatchMapping("/api/content/{id}/payout/paid")

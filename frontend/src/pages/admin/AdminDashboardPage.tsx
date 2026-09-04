@@ -2,9 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { adminApi } from "@/api/admin";
 import { FullPageSpinner } from "@/components/Spinner";
-import { ChevronRightIcon } from "@/components/icons";
+import { StatusPill } from "@/components/StatusPill";
+import { ChevronRightIcon, CoinIcon } from "@/components/icons";
 
-function StatCard({ label, value, to }: { label: string; value: number; to: string }) {
+const inrFormatter = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+
+function StatCard({ label, value, to }: { label: string; value: number | string; to: string }) {
   return (
     <Link
       to={to}
@@ -63,6 +66,53 @@ export function AdminDashboardPage() {
             />
             <StatCard label="Pending creator KYC" value={data.pendingCreatorKyc} to="/admin/creators?status=PENDING" />
           </div>
+
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink-900">Financial overview</h2>
+            <p className="mt-1 text-sm text-ink-500">Escobar is the middleman — every businessman funds their own isolated wallet.</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard label="Total funds held" value={inrFormatter.format(data.totalFundsHeldInr)} to="/admin/wallets" />
+            <StatCard label="Total paid" value={inrFormatter.format(data.totalPaidInr)} to="/admin/wallets?tab=activity" />
+            <StatCard label="Total available" value={inrFormatter.format(data.totalAvailableInr)} to="/admin/wallets" />
+            <StatCard label="Businessman wallets" value={data.activeWalletsCount} to="/admin/wallets" />
+            <StatCard
+              label="Pending top-ups"
+              value={data.pendingTopUpsCount}
+              to="/admin/wallets?tab=activity&status=PENDING"
+            />
+          </div>
+
+          {data.recentWalletActivity.length > 0 && (
+            <div className="card-surface flex flex-col gap-4 p-6">
+              <h3 className="font-display text-base font-semibold text-ink-900">Recent wallet activity</h3>
+              <div className="flex flex-col divide-y divide-ink-100">
+                {data.recentWalletActivity.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-ink-400">
+                        <CoinIcon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-ink-900">{t.businessName ?? `Business #${t.businessId}`}</p>
+                        <p className="text-xs text-ink-400">
+                          {t.type === "CREDIT" ? "Money added" : "Money paid out"} · {new Date(t.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`font-mono text-sm tabular-nums ${t.type === "CREDIT" ? "text-mint-deep" : "text-ink-700"}`}>
+                        {t.type === "CREDIT" ? "+" : "−"}
+                        {inrFormatter.format(t.amountInr)}
+                      </span>
+                      <StatusPill status={t.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="now-bar">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-signal-500 to-signal-800 text-lg">

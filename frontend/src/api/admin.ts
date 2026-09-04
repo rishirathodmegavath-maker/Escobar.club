@@ -9,8 +9,13 @@ import type {
   CampaignDisplayStatus,
   ContentStatus,
   CreatorKycReviewDetail,
+  FundingSource,
   KycStatus,
   PageResponse,
+  WalletSummary,
+  WalletTransaction,
+  WalletTransactionStatus,
+  WalletTransactionType,
 } from "@/types";
 
 export interface AdminListParams {
@@ -70,4 +75,38 @@ export const adminApi = {
       .then((r) => r.data),
   reviewContentLink: (id: number, payload: ApprovalDecisionPayload) =>
     apiClient.patch<AdminContentSummary>(`/admin/content/${id}/link-review`, payload).then((r) => r.data),
+
+  wallets: {
+    list: (params: { search?: string; page?: number; size?: number } = {}) =>
+      apiClient
+        .get<PageResponse<WalletSummary>>("/admin/wallets", { params: { size: 20, ...params } })
+        .then((r) => r.data),
+    get: (businessId: number) => apiClient.get<WalletSummary>(`/admin/wallets/${businessId}`).then((r) => r.data),
+    credit: (businessId: number, payload: { amountInr: number; note?: string }) =>
+      apiClient.post<WalletTransaction>(`/admin/wallets/${businessId}/credit`, payload).then((r) => r.data),
+    listTransactions: (params: AdminWalletTransactionFilters = {}) =>
+      apiClient
+        .get<PageResponse<WalletTransaction>>("/admin/wallet-transactions", { params: { size: 20, ...params } })
+        .then((r) => r.data),
+    exportCsv: (params: AdminWalletTransactionFilters = {}) =>
+      apiClient
+        .get<Blob>("/admin/wallet-transactions/export", { params, responseType: "blob" })
+        .then((r) => r.data),
+    review: (transactionId: number, decision: "CONFIRMED" | "REJECTED", note?: string) =>
+      apiClient.patch<WalletTransaction>(`/admin/wallet-transactions/${transactionId}/review`, { decision, note }).then((r) => r.data),
+    reverse: (transactionId: number, note: string) =>
+      apiClient.patch<WalletTransaction>(`/admin/wallet-transactions/${transactionId}/reverse`, { note }).then((r) => r.data),
+  },
 };
+
+export interface AdminWalletTransactionFilters {
+  businessId?: number;
+  type?: WalletTransactionType;
+  status?: WalletTransactionStatus;
+  fundingSource?: FundingSource;
+  from?: string;
+  to?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+}

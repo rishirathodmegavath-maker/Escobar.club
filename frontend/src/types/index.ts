@@ -23,6 +23,12 @@ export type PayoutStatus = "BELOW_THRESHOLD" | "PENDING_KYC" | "PAYABLE" | "PAID
 
 export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
+export type WalletTransactionType = "CREDIT" | "DEBIT";
+
+export type WalletTransactionStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "REVERSED";
+
+export type FundingSource = "BUSINESSMAN_MANUAL" | "ADMIN_MANUAL" | "CAMPAIGN_PAYMENT" | "REVERSAL";
+
 // Admin-curated label shown to creators, independent of the auto-computed CampaignStatus above.
 export type CampaignDisplayStatus = "UPCOMING" | "LIVE" | "HOT" | "CLOSED";
 
@@ -240,12 +246,46 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+export interface WalletSummary {
+  businessId: number;
+  businessName: string | null;
+  availableBalanceInr: number;
+  totalAddedInr: number;
+  totalPaidInr: number;
+  lastActivityAt: string | null;
+}
+
+export interface WalletTransaction {
+  id: number;
+  businessId: number;
+  businessName: string | null;
+  type: WalletTransactionType;
+  status: WalletTransactionStatus;
+  fundingSource: FundingSource;
+  amountInr: number;
+  note: string | null;
+  performedByUserId: number;
+  performedByName: string | null;
+  payoutId: number | null;
+  campaignTitle: string | null;
+  reversedTransactionId: number | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  confirmedByName: string | null;
+}
+
 export interface AdminDashboardSummary {
   totalBrands: number;
   totalCreators: number;
   totalCampaigns: number;
   pendingCampaignApprovals: number;
   pendingCreatorKyc: number;
+  totalFundsHeldInr: number;
+  totalPaidInr: number;
+  totalAvailableInr: number;
+  activeWalletsCount: number;
+  pendingTopUpsCount: number;
+  recentWalletActivity: WalletTransaction[];
 }
 
 export interface PerformanceWindow {

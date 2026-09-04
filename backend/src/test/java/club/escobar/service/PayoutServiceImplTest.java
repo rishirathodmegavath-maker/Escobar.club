@@ -1,5 +1,6 @@
 package club.escobar.service;
 
+import club.escobar.dto.payout.PayoutMarkPaidRequest;
 import club.escobar.dto.payout.PayoutResponse;
 import club.escobar.entity.Campaign;
 import club.escobar.entity.Content;
@@ -11,11 +12,13 @@ import club.escobar.entity.enums.KycStatus;
 import club.escobar.entity.enums.PayoutStatus;
 import club.escobar.entity.enums.UserRole;
 import club.escobar.exception.ForbiddenActionException;
+import club.escobar.exception.InvalidStateTransitionException;
 import club.escobar.mapper.PayoutMapper;
 import club.escobar.repository.ContentMetricsSnapshotRepository;
 import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.PayoutRepository;
+import club.escobar.service.WalletService;
 import club.escobar.service.impl.PayoutServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,8 @@ class PayoutServiceImplTest {
     private CreatorKycProfileRepository creatorKycProfileRepository;
     @Mock
     private PayoutMapper payoutMapper;
+    @Mock
+    private WalletService walletService;
 
     private PayoutServiceImpl payoutService;
 
@@ -61,7 +66,7 @@ class PayoutServiceImplTest {
     @BeforeEach
     void setUp() {
         payoutService = new PayoutServiceImpl(payoutRepository, contentRepository,
-                contentMetricsSnapshotRepository, creatorKycProfileRepository, payoutMapper);
+                contentMetricsSnapshotRepository, creatorKycProfileRepository, payoutMapper, walletService);
         creator = User.builder().id(1L).email("creator@test.com").role(UserRole.CREATOR).build();
         business = User.builder().id(2L).email("business@test.com").role(UserRole.BUSINESS).build();
         campaign = Campaign.builder().id(3L).business(business).ratePerThousandViewsInr(new BigDecimal("100.00")).build();
@@ -156,5 +161,58 @@ class PayoutServiceImplTest {
     void listForCreator_rejectsWhenNotOwnPayouts() {
         assertThatThrownBy(() -> payoutService.listForCreator(999L, 1L, null, Pageable.unpaged()))
                 .isInstanceOf(ForbiddenActionException.class);
+    }
+
+    @Test
+    void markPaid_debitsWalletThenMarksPaid_whenPayable() {
+        Payout payout = Payout.builder().id(50L).content(content).creator(creator).campaign(campaign).business(business)
+                .status(PayoutStatus.PAYABLE).amountInr(new BigDecimal("900.00")).build();
+        when(payoutRepository.findByContent_Id(10L)).thenReturn(Optional.of(payout));
+        when(payoutRepository.save(payout)).thenReturn(payout);
+        when(payoutMapper.toResponse(payout)).thenReturn(mock(PayoutResponse.class));
+
+        payoutService.markPaid(2L, 10L, new PayoutMarkPaidRequest("Bank transfer ref 123"));
+
+        var inOrder = inOrder(walletService, payoutRepository);
+        inOrder.verify(walletService).debitForPayout(payout);
+        inOrder.verify(payoutRepository).save(payout);
+        assertThat(payout.getStatus()).isEqualTo(PayoutStatus.PAID);
+    }
+
+    @Test
+    void markPaid_rollsBackWithoutSaving_whenWalletBalanceInsufficient() {
+        Payout payout = Payout.builder().id(50L).content(content).creator(creator).campaign(campaign).business(business)
+                .status(PayoutStatus.PAYABLE).amountInr(new BigDecimal("900.00")).build();
+        when(payoutRepository.findByContent_Id(10L)).thenReturn(Optional.of(payout));
+        doThrow(new InvalidStateTransitionException("Insufficient wallet balance"))
+                .when(walletService).debitForPayout(payout);
+
+        assertThatThrownBy(() -> payoutService.markPaid(2L, 10L, new PayoutMarkPaidRequest(null)))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(payout.getStatus()).isEqualTo(PayoutStatus.PAYABLE);
+        verify(payoutRepository, never()).save(any(Payout.class));
+    }
+
+    @Test
+    void markPaid_rejectsWhenNotOwnBusiness() {
+        Payout payout = Payout.builder().id(50L).content(content).creator(creator).campaign(campaign).business(business)
+                .status(PayoutStatus.PAYABLE).build();
+        when(payoutRepository.findByContent_Id(10L)).thenReturn(Optional.of(payout));
+
+        assertThatThrownBy(() -> payoutService.markPaid(999L, 10L, new PayoutMarkPaidRequest(null)))
+                .isInstanceOf(ForbiddenActionException.class);
+        verifyNoInteractions(walletService);
+    }
+
+    @Test
+    void markPaid_rejectsWhenNotCurrentlyPayable() {
+        Payout payout = Payout.builder().id(50L).content(content).creator(creator).campaign(campaign).business(business)
+                .status(PayoutStatus.PENDING_KYC).build();
+        when(payoutRepository.findByContent_Id(10L)).thenReturn(Optional.of(payout));
+
+        assertThatThrownBy(() -> payoutService.markPaid(2L, 10L, new PayoutMarkPaidRequest(null)))
+                .isInstanceOf(InvalidStateTransitionException.class);
+        verifyNoInteractions(walletService);
     }
 }

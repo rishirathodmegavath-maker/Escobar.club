@@ -62,6 +62,7 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
           { to: "/business/campaigns", label: "My campaigns", icon: MegaphoneIcon },
           { to: "/business/content", label: "Review queue", icon: ImageStackIcon },
           { to: "/business/payouts", label: "Payouts", icon: CoinIcon },
+          { to: "/business/wallet", label: "Wallet", icon: CoinIcon },
           { to: "/business/profile", label: "Company profile", icon: UserIcon },
           { to: "/account/security", label: "Security", icon: ShieldIcon },
         ],
@@ -108,6 +109,7 @@ function navSectionsForRole(role: string | undefined): NavSection[] {
           { to: "/admin/creators", label: "Creators", icon: UserIcon },
           { to: "/admin/businesses", label: "Brands", icon: MegaphoneIcon },
           { to: "/admin/campaigns", label: "Campaigns", icon: CompassIcon },
+          { to: "/admin/wallets", label: "Wallets", icon: CoinIcon },
         ],
       },
     ];

@@ -18,6 +18,7 @@ import club.escobar.repository.ContentRepository;
 import club.escobar.repository.CreatorKycProfileRepository;
 import club.escobar.repository.PayoutRepository;
 import club.escobar.service.PayoutService;
+import club.escobar.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,7 @@ public class PayoutServiceImpl implements PayoutService {
     private final ContentMetricsSnapshotRepository contentMetricsSnapshotRepository;
     private final CreatorKycProfileRepository creatorKycProfileRepository;
     private final PayoutMapper payoutMapper;
+    private final WalletService walletService;
 
     @Override
     @Transactional
@@ -152,6 +154,10 @@ public class PayoutServiceImpl implements PayoutService {
             throw new InvalidStateTransitionException(
                     "Cannot mark a payout as paid unless it is currently PAYABLE (current status: " + payout.getStatus() + ")");
         }
+
+        // Debits the business's wallet first - if the balance can't cover it, this throws and the
+        // whole transaction (including the payout status change below) rolls back.
+        walletService.debitForPayout(payout);
 
         payout.setStatus(PayoutStatus.PAID);
         payout.setPaidAt(Instant.now());
