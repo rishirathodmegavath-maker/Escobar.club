@@ -128,11 +128,6 @@ export function BusinessDashboardPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Live campaigns" value={String(data.liveCampaigns)} to="/business/campaigns" />
         <StatCard
-          label="Awaiting your review"
-          value={String(data.contentAwaitingReview)}
-          to="/business/content?status=SUBMITTED"
-        />
-        <StatCard
           label="Changes requested"
           value={String(data.contentChangesRequested)}
           sublabel="Waiting on the creator"

@@ -83,13 +83,8 @@ export function CreatorDashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Active campaigns" value={String(data.activeCampaignsCount)} to="/creator/content" />
-        <StatCard
-          label="Awaiting review"
-          value={String(data.submissionStatus.submitted)}
-          to="/creator/content"
-        />
         <StatCard
           label="Payable earnings"
           value={inrFormatter.format(data.earnings.payableInr)}
